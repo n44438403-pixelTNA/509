@@ -148,39 +148,94 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
       }
   }, [user.isPremium, user.subscriptionEndDate]);
 
-  // --- POPUP LOGIC (EXPIRY WARNING & UPSELL) ---
+  // --- POPUP LOGIC (EXPIRY WARNING, UPSELL, AND EVENT) ---
   useEffect(() => {
       const checkPopups = () => {
           const now = Date.now();
+
+          // 1. Expiry Warning
           if (settings?.popupConfigs?.isExpiryWarningEnabled && user.isPremium && user.subscriptionEndDate) {
              const end = new Date(user.subscriptionEndDate).getTime();
              const diffHours = (end - now) / (1000 * 60 * 60);
-             const threshold = settings.popupConfigs.expiryWarningHours || 48;
+             const threshold = settings.popupConfigs.expiryWarningHours || 24;
              if (diffHours > 0 && diffHours <= threshold) {
                  const lastShown = parseInt(localStorage.getItem(`last_expiry_warn_${user.id}`) || '0');
                  const interval = (settings.popupConfigs.expiryWarningIntervalMinutes || 60) * 60 * 1000;
                  if (now - lastShown > interval) {
-                     showAlert(`⚠️ Your subscription expires in ${Math.ceil(diffHours)} hours! Renew now to keep access.`, "INFO", "Expiry Warning");
+                     showAlert(`⚠️ Your subscription expires in ${Math.ceil(diffHours)} hours! Renew now to keep uninterrupted access.`, "INFO", "Expiry Warning");
                      localStorage.setItem(`last_expiry_warn_${user.id}`, now.toString());
+                     return; // Show one at a time
                  }
              }
           }
+
+          // 2. Upsell Promotion
           if (settings?.popupConfigs?.isUpsellEnabled && user.subscriptionLevel !== 'ULTRA') {
              const lastShown = parseInt(localStorage.getItem(`last_upsell_${user.id}`) || '0');
              const interval = (settings.popupConfigs.upsellPopupIntervalMinutes || 120) * 60 * 1000;
              if (now - lastShown > interval) {
                  const isFree = !user.isPremium;
                  const msg = isFree
-                     ? "🚀 Unlock full power! Upgrade to Basic or Ultra for more features."
-                     : "💎 Go Ultra! Get unlimited access to Competition Mode and AI.";
+                     ? "🚀 Upgrade to Premium to unlock Full Subject Notes, Ad-Free Videos, and AI tools!"
+                     : "💎 Go Ultra! Get unlimited access to Competition Mode, Deep Dive Notes, and AI Chat.";
                  showAlert(msg, "INFO", "Upgrade Available");
                  localStorage.setItem(`last_upsell_${user.id}`, now.toString());
+                 return; // Show one at a time
              }
           }
+
+          // 3. Discount Event Notification
+          if (settings?.specialDiscountEvent?.enabled) {
+              const event = settings.specialDiscountEvent;
+              let isEventActive = false;
+              if (event.startsAt && event.endsAt) {
+                  isEventActive = now >= new Date(event.startsAt).getTime() && now < new Date(event.endsAt).getTime();
+              }
+
+              if (isEventActive) {
+                  const isSubscribed = user.isPremium && user.subscriptionEndDate && new Date(user.subscriptionEndDate) > new Date(now);
+                  const shouldShow = (isSubscribed && event.showToPremiumUsers) || (!isSubscribed && event.showToFreeUsers);
+
+                  if (shouldShow) {
+                      const lastShown = parseInt(localStorage.getItem(`last_event_promo_${user.id}_${event.eventName}`) || '0');
+                      // Show every 2 hours if not specified differently, just to ensure they know about the sale
+                      const interval = 2 * 60 * 60 * 1000;
+                      if (now - lastShown > interval) {
+                          showAlert(`🎉 ${event.eventName} is LIVE! Get ${event.discountPercent}% OFF on subscriptions right now!`, "SUCCESS", "Special Event");
+                          localStorage.setItem(`last_event_promo_${user.id}_${event.eventName}`, now.toString());
+                          return;
+                      }
+                  }
+              }
+          }
+
+          // 4. Global Free Access & Credit Free Event Popups
+          if (settings?.isGlobalFreeMode) {
+              const lastShown = parseInt(localStorage.getItem(`last_global_free_${user.id}`) || '0');
+              const interval = 4 * 60 * 60 * 1000; // Every 4 hours
+              if (now - lastShown > interval) {
+                  showAlert("🌟 GLOBAL FREE ACCESS IS LIVE! Enjoy everything for free!", "SUCCESS", "Special Event");
+                  localStorage.setItem(`last_global_free_${user.id}`, now.toString());
+                  return;
+              }
+          }
+
+          if (settings?.isCreditFreeEvent) {
+              const lastShown = parseInt(localStorage.getItem(`last_credit_free_${user.id}`) || '0');
+              const interval = 4 * 60 * 60 * 1000; // Every 4 hours
+              if (now - lastShown > interval) {
+                  showAlert("⚡ CREDIT FREE EVENT IS LIVE! Unlock content without using your coins!", "SUCCESS", "Special Event");
+                  localStorage.setItem(`last_credit_free_${user.id}`, now.toString());
+                  return;
+              }
+          }
+
       };
-      const timer = setInterval(checkPopups, 60000);
+
+      checkPopups(); // Check immediately on mount/update
+      const timer = setInterval(checkPopups, 60000); // And every minute
       return () => clearInterval(timer);
-  }, [user.isPremium, user.subscriptionEndDate, settings?.popupConfigs]);
+  }, [user.isPremium, user.subscriptionEndDate, settings?.popupConfigs, settings?.specialDiscountEvent]);
 
   // CUSTOM ALERT STATE
   const [alertConfig, setAlertConfig] = useState<{isOpen: boolean, type: 'SUCCESS'|'ERROR'|'INFO', title?: string, message: string}>({isOpen: false, type: 'INFO', message: ''});
