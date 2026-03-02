@@ -31,9 +31,9 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
     name: '',
     mobile: '',
     email: '',
-    board: '' as any as Board,
-    classLevel: '' as any as ClassLevel,
-    stream: '' as any as Stream,
+    board: '',
+    classLevel: '',
+    stream: '',
     recoveryCode: ''
   });
   
@@ -111,7 +111,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
           const uid = userCredential.user.uid;
 
           const newId = generateUserId();
-          const isSenior = formData.classLevel === '11' || formData.classLevel === '12';
+
           
           const newUser: User = {
             id: uid,
@@ -126,9 +126,9 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
             streak: 0,
             lastLoginDate: new Date().toISOString(),
             redeemedCodes: [],
-            board: formData.board,
-            classLevel: formData.classLevel,
-            stream: isSenior ? formData.stream : undefined,
+            board: "",
+            classLevel: "",
+            stream: "",
             progress: {},
             subscriptionTier: 'WEEKLY',
             subscriptionEndDate: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
@@ -354,10 +354,10 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
         setError('Please fill in all required fields');
         return;
       }
-      if (!formData.board) { setError('Please select a Board'); return; }
-      if (!formData.classLevel) { setError('Please select a Class'); return; }
-      const isSenior = formData.classLevel === '11' || formData.classLevel === '12';
-      if (isSenior && !formData.stream) { setError('Please select a Stream'); return; }
+
+
+
+
 
       if (settings && settings.allowSignup === false) {
           setError('Registration is currently closed by Admin.');
@@ -549,11 +549,6 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Password (8-20 Chars)</label><input name="password" type="password" placeholder="Create Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={20} /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Real Email Address</label><input name="email" type="email" placeholder="your.email@gmail.com" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile (10 Digits)</label><input name="mobile" type="tel" placeholder="Mobile Number" value={formData.mobile} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={10} /></div>
-                    <div className="bg-blue-50 p-4 rounded-xl space-y-3 border border-blue-100">
-                        <div className="space-y-1.5"><label className="text-xs font-bold text-blue-800 uppercase">Board</label><select name="board" value={formData.board} onChange={handleChange} className="w-full px-4 py-3 border border-blue-200 rounded-xl bg-white text-slate-700"><option value="">Select Board</option><option value="CBSE">CBSE Board</option><option value="BSEB">Bihar Board (BSEB)</option></select></div>
-                        <div className="space-y-1.5"><label className="text-xs font-bold text-blue-800 uppercase">Class</label><select name="classLevel" value={formData.classLevel} onChange={handleChange} className="w-full px-4 py-3 border border-blue-200 rounded-xl bg-white text-slate-700"><option value="">Select Class</option>{['6','7','8','9','10','11','12'].map(c => <option key={c} value={c}>Class {c}</option>)}<option value="COMPETITION">Competitive Exam</option></select></div>
-                        {(formData.classLevel === '11' || formData.classLevel === '12') && (<div className="space-y-1.5"><label className="text-xs font-bold text-blue-800 uppercase">Stream</label><select name="stream" value={formData.stream} onChange={handleChange} className="w-full px-4 py-3 border border-blue-200 rounded-xl bg-white text-slate-700"><option value="">Select Stream</option><option value="Science">Science</option><option value="Commerce">Commerce</option><option value="Arts">Arts</option></select></div>)}
-                    </div>
                     <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Generate ID & Sign Up</button>
                   </>
               )}

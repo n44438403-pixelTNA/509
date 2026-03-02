@@ -123,9 +123,9 @@ export interface User {
   isAutoDeductEnabled?: boolean; // NEW: Skip confirmation popup for credit spending
 
   // New Fields for Student Profile
-  board?: Board;
-  classLevel?: ClassLevel;
-  stream?: Stream; // Only for 11/12
+  board?: string;
+  classLevel?: string;
+  stream?: string; // Only for 11/12
   
   // Chat & Premium Features
   isPremium?: boolean;
@@ -982,7 +982,7 @@ export interface LessonContent {
   analytics?: any; // For passing full analytics data
 }
 
-export type ViewState = 'BOARDS' | 'CLASSES' | 'STREAMS' | 'SUBJECTS' | 'CHAPTERS' | 'LESSON' | 'ADMIN_DASHBOARD' | 'AUDIO_STUDIO' | 'STUDENT_DASHBOARD' | 'UNIVERSAL_CHAT' | 'RULES' | 'IIC' | 'LEADERBOARD';
+export type ViewState = 'ONBOARDING' | 'BOARDS' | 'CLASSES' | 'STREAMS' | 'SUBJECTS' | 'CHAPTERS' | 'LESSON' | 'ADMIN_DASHBOARD' | 'AUDIO_STUDIO' | 'STUDENT_DASHBOARD' | 'UNIVERSAL_CHAT' | 'RULES' | 'IIC' | 'LEADERBOARD';
 
 export interface WeeklyTest {
   id: string;
