@@ -636,42 +636,8 @@ const App: React.FC = () => {
                }
           }
 
-          // 2. Expiry Warning Notifications (24 Hours)
-          if (updatedUser.isPremium && updatedUser.subscriptionEndDate) {
-               const now = new Date();
-               const end = new Date(updatedUser.subscriptionEndDate);
-               const diff = end.getTime() - now.getTime();
-               const hoursLeft = diff / (1000 * 60 * 60);
-
-               if (hoursLeft > 0 && hoursLeft <= 24) {
-                   const lastWarnKey = `nst_expiry_warn_${updatedUser.id}`;
-                   const lastWarnTime = parseInt(localStorage.getItem(lastWarnKey) || '0');
-
-                   // Warn every 1 hour (as per user request)
-                   if (now.getTime() - lastWarnTime > 60 * 60 * 1000) {
-                        const msg = `⚠️ Your ${updatedUser.subscriptionTier} Plan expires in ${Math.round(hoursLeft)}h. Basic plan will remain active if available.`;
-                        setAlertConfig({isOpen: true, message: msg});
-
-                        // Add to Inbox
-                        const warnMsg: InboxMessage = {
-                            id: `warn-${Date.now()}`,
-                            text: msg,
-                            date: new Date().toISOString(),
-                            read: false,
-                            type: 'TEXT'
-                        };
-
-                        // We must update the user object again with the new message
-                        const userWithMsg = { ...updatedUser, inbox: [warnMsg, ...(updatedUser.inbox || [])] };
-
-                        localStorage.setItem('nst_current_user', JSON.stringify(userWithMsg));
-                        saveUserToLive(userWithMsg);
-                        setState(prev => ({...prev, user: userWithMsg}));
-
-                        localStorage.setItem(lastWarnKey, now.getTime().toString());
-                   }
-               }
-          }
+          // Note: Expiry warning logic has been migrated and expanded in StudentDashboard.tsx
+          // based on settings.popupConfigs. Removing it from App.tsx to prevent duplicate/competing popups.
       };
 
       const interval = setInterval(checkExpiry, 60000); // Check every minute
@@ -740,27 +706,11 @@ const App: React.FC = () => {
 
       // POPUP QUEUE INITIALIZATION
       const queue: ('TRACKER' | 'CHALLENGE' | 'WELCOME' | 'THREE_TIER')[] = [];
-      
       const loggedInUserStr = localStorage.getItem('nst_current_user');
-      const today = new Date().toDateString();
-
-      // DAILY CHALLENGE POPUP REMOVED AS PER REQUEST
-      // if (loggedInUserStr) {
-      //     const lastChallenge = localStorage.getItem('nst_last_daily_challenge_date');
-      //     if (lastChallenge !== today) {
-      //         queue.push('CHALLENGE');
-      //     }
-      // }
-
-      // 4. Welcome (Once per install) - DISABLED
       const hasSeenWelcome = localStorage.getItem('nst_has_seen_welcome');
-      // if (!hasSeenWelcome && hasAcceptedTerms && loadedSettings.showWelcomePopup !== false) {
-          // queue.push('WELCOME');
-      // }
 
       setPopupQueue(queue);
 
-    // console.log("Restoring user from localStorage:", loggedInUserStr);
     if (loggedInUserStr) {
       try {
         let user: User = JSON.parse(loggedInUserStr);

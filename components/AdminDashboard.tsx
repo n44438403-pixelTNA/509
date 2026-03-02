@@ -528,6 +528,7 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
   const [newPkgName, setNewPkgName] = useState('');
   const [newPkgPrice, setNewPkgPrice] = useState('');
   const [newPkgCredits, setNewPkgCredits] = useState('');
+  const [newPkgDummyPrice, setNewPkgDummyPrice] = useState('');
 
   // --- GLOBAL BOARD CONTEXT (STRICT ISOLATION) ---
   const [adminBoardContext, setAdminBoardContext] = useState<Board>('CBSE');
@@ -1812,12 +1813,13 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
           id: `pkg-${Date.now()}`,
           name: newPkgName,
           price: Number(newPkgPrice),
-          credits: Number(newPkgCredits)
+          credits: Number(newPkgCredits),
+          dummyPrice: newPkgDummyPrice ? Number(newPkgDummyPrice) : undefined
       };
       const currentPkgs = localSettings.packages || [];
       const updatedPkgs = [...currentPkgs, newPkg];
       setLocalSettings({ ...localSettings, packages: updatedPkgs });
-      setNewPkgName(''); setNewPkgPrice(''); setNewPkgCredits('');
+      setNewPkgName(''); setNewPkgPrice(''); setNewPkgCredits(''); setNewPkgDummyPrice('');
   };
 
   const removePackage = (id: string) => {
@@ -2756,36 +2758,201 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                   <h3 className="text-xl font-black text-slate-800">Store Manager</h3>
               </div>
 
-              {/* EVENT TOGGLES (Moved from Event Manager) */}
+              {/* STORE EVENTS & POPUPS */}
               <div className="mb-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                  <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Zap size={18} className="text-yellow-500" /> Active Store Events</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200">
-                          <span className="text-xs font-bold text-slate-700">Credit Free Event</span>
-                          <input
-                              type="checkbox"
-                              checked={localSettings.isCreditFreeEvent || false}
-                              onChange={e => setLocalSettings({...localSettings, isCreditFreeEvent: e.target.checked})}
-                              className="w-5 h-5 accent-blue-600"
-                          />
+                  <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Zap size={18} className="text-yellow-500" /> Advanced Store Events & Logic</h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                      {/* Revision Logic Toggle */}
+                      <div className="flex flex-col gap-2 bg-white p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">Revision Engine</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.revisionConfig?.trackWrongAnswers ?? true}
+                                  onChange={e => setLocalSettings({...localSettings, revisionConfig: {...localSettings.revisionConfig, trackWrongAnswers: e.target.checked}})}
+                                  className="w-5 h-5 accent-blue-600"
+                              />
+                          </div>
+                          <p className="text-[10px] text-slate-500 leading-tight">
+                              Enable/Disable Revision Hub tracking globally.
+                          </p>
                       </div>
-                      <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200">
-                          <span className="text-xs font-bold text-slate-700">Global Free Access</span>
-                          <input
-                              type="checkbox"
-                              checked={localSettings.isGlobalFreeMode || false}
-                              onChange={e => setLocalSettings({...localSettings, isGlobalFreeMode: e.target.checked})}
-                              className="w-5 h-5 accent-blue-600"
-                          />
+
+                      {/* Credit Free Event Toggle */}
+                      <div className="flex flex-col gap-2 bg-white p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">Credit Free Event</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.isCreditFreeEvent || false}
+                                  onChange={e => setLocalSettings({...localSettings, isCreditFreeEvent: e.target.checked})}
+                                  className="w-5 h-5 accent-blue-600"
+                              />
+                          </div>
+                          {localSettings.isCreditFreeEvent && (
+                              <p className="text-[10px] text-slate-500 leading-tight">
+                                  All content normally requiring credits will be completely free.
+                              </p>
+                          )}
                       </div>
-                      <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200">
-                          <span className="text-xs font-bold text-slate-700">Discount Sale Event</span>
-                          <input
-                              type="checkbox"
-                              checked={localSettings.specialDiscountEvent?.enabled || false}
-                              onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), enabled: e.target.checked}})}
-                              className="w-5 h-5 accent-blue-600"
-                          />
+
+                      {/* Global Free Access Toggle */}
+                      <div className="flex flex-col gap-2 bg-white p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">Global Free Access</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.isGlobalFreeMode || false}
+                                  onChange={e => setLocalSettings({...localSettings, isGlobalFreeMode: e.target.checked})}
+                                  className="w-5 h-5 accent-blue-600"
+                              />
+                          </div>
+                          {localSettings.isGlobalFreeMode && (
+                              <p className="text-[10px] text-slate-500 leading-tight">
+                                  Overrides all subscriptions. Every user gets Ultra Access.
+                              </p>
+                          )}
+                      </div>
+
+                      {/* Discount Event Toggle */}
+                      <div className="flex flex-col gap-2 bg-white p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">Discount Sale Event</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.specialDiscountEvent?.enabled || false}
+                                  onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), enabled: e.target.checked}})}
+                                  className="w-5 h-5 accent-blue-600"
+                              />
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* EVENT DETAILED SETTINGS */}
+                  {localSettings.specialDiscountEvent?.enabled && (
+                      <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-inner mb-4 animate-in fade-in slide-in-from-top-2">
+                          <h5 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Ticket size={16}/> Discount Event Configuration</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                  <label className="text-[10px] font-bold text-slate-500 block">Event Name</label>
+                                  <input
+                                      type="text"
+                                      value={localSettings.specialDiscountEvent?.eventName || ''}
+                                      onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), eventName: e.target.value}})}
+                                      className="w-full p-2 border rounded text-sm"
+                                      placeholder="e.g. Diwali Mega Sale"
+                                  />
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-slate-500 block">Discount %</label>
+                                  <input
+                                      type="number"
+                                      value={localSettings.specialDiscountEvent?.discountPercent || 0}
+                                      onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), discountPercent: Number(e.target.value)}})}
+                                      className="w-full p-2 border rounded text-sm"
+                                  />
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-slate-500 block">Renewal Bonus % (Extra)</label>
+                                  <input
+                                      type="number"
+                                      value={localSettings.specialDiscountEvent?.renewalDiscountPercent || 0}
+                                      onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), renewalDiscountPercent: Number(e.target.value)}})}
+                                      className="w-full p-2 border rounded text-sm"
+                                  />
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-slate-500 block">Start Date/Time</label>
+                                  <input
+                                      type="datetime-local"
+                                      value={localSettings.specialDiscountEvent?.startsAt ? new Date(localSettings.specialDiscountEvent.startsAt).toISOString().slice(0, 16) : ''}
+                                      onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), startsAt: e.target.value ? new Date(e.target.value).toISOString() : undefined}})}
+                                      className="w-full p-2 border rounded text-sm"
+                                  />
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-slate-500 block">End Date/Time</label>
+                                  <input
+                                      type="datetime-local"
+                                      value={localSettings.specialDiscountEvent?.endsAt ? new Date(localSettings.specialDiscountEvent.endsAt).toISOString().slice(0, 16) : ''}
+                                      onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), endsAt: e.target.value ? new Date(e.target.value).toISOString() : undefined}})}
+                                      className="w-full p-2 border rounded text-sm"
+                                  />
+                              </div>
+                          </div>
+
+                          <div className="flex items-center gap-4 mt-4">
+                               <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                                  <input type="checkbox" checked={localSettings.specialDiscountEvent?.showToFreeUsers ?? true} onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), showToFreeUsers: e.target.checked}})} className="accent-blue-600" /> Show to Free Users
+                               </label>
+                               <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                                  <input type="checkbox" checked={localSettings.specialDiscountEvent?.showToPremiumUsers ?? true} onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), showToPremiumUsers: e.target.checked}})} className="accent-blue-600" /> Show to Premium Users
+                               </label>
+                          </div>
+                      </div>
+                  )}
+
+                  {/* POPUP CONFIGURATIONS */}
+                  <h5 className="font-bold text-slate-800 mt-6 mb-3 border-t pt-4">Automatic Popup Triggers</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Expiry Warning Popup */}
+                      <div className="bg-white p-4 rounded-xl border border-slate-200">
+                          <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs font-bold text-red-600 flex items-center gap-1"><AlertOctagon size={14}/> Expiry Warning</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.popupConfigs?.isExpiryWarningEnabled ?? true}
+                                  onChange={e => setLocalSettings({...localSettings, popupConfigs: {...(localSettings.popupConfigs || {} as any), isExpiryWarningEnabled: e.target.checked}})}
+                                  className="w-4 h-4 accent-red-600"
+                              />
+                          </div>
+                          {localSettings.popupConfigs?.isExpiryWarningEnabled !== false && (
+                              <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                      <label className="text-[10px] text-slate-500">Trigger (Hours before)</label>
+                                      <input
+                                          type="number"
+                                          value={localSettings.popupConfigs?.expiryWarningHours ?? 24}
+                                          onChange={e => setLocalSettings({...localSettings, popupConfigs: {...(localSettings.popupConfigs || {} as any), expiryWarningHours: Number(e.target.value)}})}
+                                          className="w-full p-1.5 border rounded text-xs"
+                                      />
+                                  </div>
+                                  <div>
+                                      <label className="text-[10px] text-slate-500">Interval (Minutes)</label>
+                                      <input
+                                          type="number"
+                                          value={localSettings.popupConfigs?.expiryWarningIntervalMinutes ?? 60}
+                                          onChange={e => setLocalSettings({...localSettings, popupConfigs: {...(localSettings.popupConfigs || {} as any), expiryWarningIntervalMinutes: Number(e.target.value)}})}
+                                          className="w-full p-1.5 border rounded text-xs"
+                                      />
+                                  </div>
+                              </div>
+                          )}
+                      </div>
+
+                      {/* Upsell Popup */}
+                      <div className="bg-white p-4 rounded-xl border border-slate-200">
+                          <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs font-bold text-green-600 flex items-center gap-1"><ArrowUpCircle size={14}/> Upsell Promotion</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.popupConfigs?.isUpsellEnabled ?? true}
+                                  onChange={e => setLocalSettings({...localSettings, popupConfigs: {...(localSettings.popupConfigs || {} as any), isUpsellEnabled: e.target.checked}})}
+                                  className="w-4 h-4 accent-green-600"
+                              />
+                          </div>
+                          {localSettings.popupConfigs?.isUpsellEnabled !== false && (
+                              <div>
+                                  <label className="text-[10px] text-slate-500">Show Interval (Minutes)</label>
+                                  <input
+                                      type="number"
+                                      value={localSettings.popupConfigs?.upsellPopupIntervalMinutes ?? 120}
+                                      onChange={e => setLocalSettings({...localSettings, popupConfigs: {...(localSettings.popupConfigs || {} as any), upsellPopupIntervalMinutes: Number(e.target.value)}})}
+                                      className="w-full p-1.5 border rounded text-xs"
+                                  />
+                              </div>
+                          )}
                       </div>
                   </div>
               </div>
@@ -3978,66 +4145,6 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                       </div>
                   </div>
 
-                  {/* --- REVISION LOGIC CONFIGURATION --- */}
-                  <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 mt-4">
-                      <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><BrainCircuit size={18} className="text-purple-500" /> Revision Engine Config</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div>
-                          <label className="text-xs font-bold text-slate-500 uppercase">Strong Topic (Min %)</label>
-                          <input
-                              type="number"
-                              value={localSettings.revisionConfig?.thresholds.strong ?? 80}
-                              onChange={(e) => setLocalSettings({
-                                  ...localSettings,
-                                  revisionConfig: {
-                                      ...localSettings.revisionConfig!,
-                                      thresholds: {
-                                          ...localSettings.revisionConfig?.thresholds!,
-                                          strong: parseInt(e.target.value) || 0
-                                      }
-                                  } as any
-                              })}
-                              className="w-full p-2 border rounded-lg mt-1"
-                          />
-                      </div>
-                      <div>
-                          <label className="text-xs font-bold text-slate-500 uppercase">Average Topic (Min %)</label>
-                          <input
-                              type="number"
-                              value={localSettings.revisionConfig?.thresholds.average ?? 50}
-                              onChange={(e) => setLocalSettings({
-                                  ...localSettings,
-                                  revisionConfig: {
-                                      ...localSettings.revisionConfig!,
-                                      thresholds: {
-                                          ...localSettings.revisionConfig?.thresholds!,
-                                          average: parseInt(e.target.value) || 0
-                                      }
-                                  } as any
-                              })}
-                              className="w-full p-2 border rounded-lg mt-1"
-                          />
-                      </div>
-                      <div>
-                          <label className="text-xs font-bold text-slate-500 uppercase">Mastery Target (%)</label>
-                          <input
-                              type="number"
-                              value={localSettings.revisionConfig?.thresholds.mastery ?? 80}
-                              onChange={(e) => setLocalSettings({
-                                  ...localSettings,
-                                  revisionConfig: {
-                                      ...localSettings.revisionConfig!,
-                                      thresholds: {
-                                          ...localSettings.revisionConfig?.thresholds!,
-                                          mastery: parseInt(e.target.value) || 0
-                                      }
-                                  } as any
-                              })}
-                              className="w-full p-2 border rounded-lg mt-1"
-                          />
-                      </div>
-                      </div>
-                  </div>
               </div>
 
               <button onClick={() => handleSaveSettings()} className="w-full mt-6 bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-green-700 flex items-center justify-center gap-2">
@@ -7062,7 +7169,10 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                                       <div key={pkg.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
                                           <div>
                                               <p className="font-bold text-sm text-slate-800">{pkg.name}</p>
-                                              <p className="text-xs text-slate-500">₹{pkg.price} = {pkg.credits} Credits</p>
+                                              <div className="text-xs text-slate-500">
+    <span className="line-through text-slate-400 mr-2">{pkg.dummyPrice ? `₹${pkg.dummyPrice}` : ''}</span>
+    <span className="font-bold text-green-600">₹{pkg.price}</span> = {pkg.credits} Credits
+</div>
                                           </div>
                                           <button onClick={() => removePackage(pkg.id)} className="text-red-400 hover:text-red-600 p-2"><Trash2 size={16} /></button>
                                       </div>

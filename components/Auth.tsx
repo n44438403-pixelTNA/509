@@ -3,7 +3,7 @@ import { User, Board, ClassLevel, Stream, SystemSettings, RecoveryRequest } from
 import { ADMIN_EMAIL } from '../constants';
 import { saveUserToLive, auth, getUserByEmail, rtdb, getUserData } from '../firebase';
 import { ref, set } from "firebase/database";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, signInAnonymously } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { UserPlus, LogIn, Lock, User as UserIcon, Phone, Mail, ShieldCheck, ArrowRight, School, GraduationCap, Layers, KeyRound, Copy, Check, AlertTriangle, XCircle, MessageCircle, Send, RefreshCcw, ShieldAlert, HelpCircle } from 'lucide-react';
 import { LoginGuide } from './LoginGuide';
 import { CustomAlert } from './CustomDialogs';
@@ -243,6 +243,72 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
           setError(null);
       } catch (e: any) {
           setError("Request Failed: " + e.message);
+      }
+  };
+
+  const handleGoogleAuth = async () => {
+      try {
+          const provider = new GoogleAuthProvider();
+          await setPersistence(auth, browserLocalPersistence);
+          const result = await signInWithPopup(auth, provider);
+          const firebaseUser = result.user;
+
+          const storedUsersStr = localStorage.getItem('nst_users');
+          const users: User[] = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+
+          // Try fetching by ID first
+          let appUser: any = await getUserData(firebaseUser.uid);
+
+          // Fallback: Try by Email
+          if (!appUser && firebaseUser.email) {
+              appUser = await getUserByEmail(firebaseUser.email);
+          }
+
+          // Fallback: Local Storage
+          if (!appUser && firebaseUser.email) {
+               appUser = users.find(u => u.id === firebaseUser.uid || u.email === firebaseUser.email);
+          }
+
+          if (!appUser) {
+              console.log("No existing user found for this Google account. Creating new profile...");
+              const newId = generateUserId();
+              appUser = {
+                  id: firebaseUser.uid,
+                  displayId: newId,
+                  name: firebaseUser.displayName || 'Student',
+                  email: firebaseUser.email || '',
+                  password: '', // Passwordless for Google Auth
+                  mobile: '',
+                  role: 'STUDENT',
+                  createdAt: new Date().toISOString(),
+                  credits: settings?.signupBonus || 2,
+                  streak: 0,
+                  lastLoginDate: new Date().toISOString(),
+                  board: '', // Left empty to trigger onboarding
+                  classLevel: '', // Left empty to trigger onboarding
+                  progress: {},
+                  redeemedCodes: [],
+                  subscriptionTier: 'FREE',
+                  isPremium: false
+              } as User;
+
+              const updatedUsers = [...users, appUser];
+              localStorage.setItem('nst_users', JSON.stringify(updatedUsers));
+
+              await saveUserToLive(appUser);
+              logActivity("SIGNUP_GOOGLE", "New Student Registered via Google", appUser);
+          } else {
+              console.log("Existing user found via Google:", appUser.id);
+          }
+
+          if (appUser.isArchived) { setError('Account Deleted.'); return; }
+
+          logActivity("LOGIN_GOOGLE", "Student Logged In (Google)", appUser);
+          onLogin(appUser);
+
+      } catch (err: any) {
+          console.error("Google Auth Error:", err);
+          setError(err.message || "Google Login Failed. Try again.");
       }
   };
 
@@ -555,6 +621,15 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
 
               {view === 'LOGIN' && (
                   <>
+                     <button type="button" onClick={handleGoogleAuth} className="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3.5 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-50 mb-4">
+                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                         Continue with Google
+                     </button>
+                     <div className="flex items-center gap-4 my-4">
+                         <div className="flex-1 h-px bg-slate-200"></div>
+                         <span className="text-xs font-bold text-slate-400">OR</span>
+                         <div className="flex-1 h-px bg-slate-200"></div>
+                     </div>
                      <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Email / Mobile</label><input name="id" type="text" placeholder="Enter Email or Mobile" value={formData.id} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
                      <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Password</label><input name="password" type="password" placeholder="Enter Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
                      <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Login</button>
