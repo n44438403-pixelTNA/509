@@ -1,5 +1,5 @@
 export const config = {
-  runtime: 'edge',
+  runtime: 'nodejs',
 };
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1/models";
