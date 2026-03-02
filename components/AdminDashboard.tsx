@@ -122,6 +122,7 @@ type AdminTab =
   | 'REVISION_LOGIC' // NEW
   | 'PLAN_MATRIX'
   | 'FEATURE_ACCESS' // NEW
+  | 'DEPLOY'
   | 'EVENT_MANAGER' // NEW
   | 'NSTA_CONTROL' // NEW - Replaces APP_SOUL
   | 'DOCUMENTATION'; // NEW
@@ -7589,6 +7590,236 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
 
       {/* --- AI NOTES MANAGER TAB --- */}
 
+
+      {/* --- DEPLOYMENT / APP UPDATE TAB (Restored without junk) --- */}
+      {activeTab === 'DEPLOY' && (
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 animate-in slide-in-from-right">
+              <div className="flex items-center gap-4 mb-6">
+                  <button onClick={() => setActiveTab('DASHBOARD')} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><ArrowLeft size={20} /></button>
+                  <h3 className="text-xl font-black text-slate-800">App Update Configuration</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* APP UPDATE CONFIGURATION */}
+                  <div className="bg-green-50 p-6 rounded-3xl border border-green-100 space-y-4">
+                      <div>
+                          <div className="w-12 h-12 bg-green-600 text-white rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-green-200">
+                              <RefreshCw size={24} />
+                          </div>
+                          <h4 className="text-xl font-black text-green-900 mb-2">Configure App Update</h4>
+                          <p className="text-xs text-green-700 mb-4">Manage Force Updates and version notifications.</p>
+                      </div>
+
+                      <div className="space-y-3">
+                          <div>
+                              <label className="text-[10px] font-bold text-green-700 uppercase">Version Code</label>
+                              <input
+                                  type="text"
+                                  value={localSettings.latestVersion || ''}
+                                  onChange={e => setLocalSettings({...localSettings, latestVersion: e.target.value})}
+                                  placeholder="e.g. 1.2.5"
+                                  className="w-full p-2 rounded-lg border border-green-200 text-sm font-bold"
+                              />
+                          </div>
+                          <div>
+                              <label className="text-[10px] font-bold text-green-700 uppercase">Official App Share Link</label>
+                              <input
+                                  type="text"
+                                  value={localSettings.officialAppUrl || ''}
+                                  onChange={e => setLocalSettings({...localSettings, officialAppUrl: e.target.value})}
+                                  placeholder="https://play.google.com/..."
+                                  className="w-full p-2 rounded-lg border border-green-200 text-sm"
+                              />
+                              <p className="text-[9px] text-green-600 mt-1">Used when sharing Marksheets via WhatsApp.</p>
+                          </div>
+                          <div>
+                              <label className="text-[10px] font-bold text-green-700 uppercase">Update Link (Play Store)</label>
+                              <input
+                                  type="text"
+                                  value={localSettings.updateUrl || ''}
+                                  onChange={e => setLocalSettings({...localSettings, updateUrl: e.target.value})}
+                                  placeholder="https://..."
+                                  className="w-full p-2 rounded-lg border border-green-200 text-sm"
+                              />
+                          </div>
+                          <div>
+                              <label className="text-[10px] font-bold text-green-700 uppercase">Launch Date</label>
+                              <input
+                                  type="datetime-local"
+                                  value={localSettings.launchDate || ''}
+                                  onChange={e => setLocalSettings({...localSettings, launchDate: e.target.value})}
+                                  className="w-full p-2 rounded-lg border border-green-200 text-sm"
+                              />
+                          </div>
+                          {/* GRACE PERIOD CONFIG */}
+                          <div className="bg-white p-3 rounded-xl border border-green-200">
+                              <label className="text-[10px] font-bold text-green-700 uppercase mb-2 block">Grace Period (Lock App After)</label>
+                              <div className="grid grid-cols-4 gap-2">
+                                  <div>
+                                      <input
+                                          type="number"
+                                          value={localSettings.updateGracePeriod?.days || 0}
+                                          onChange={e => {
+                                              const val = Math.max(0, parseInt(e.target.value) || 0);
+                                              const newGrace = {
+                                                  ...(localSettings.updateGracePeriod || { days: 0, hours: 0, minutes: 0, seconds: 0 }),
+                                                  days: val
+                                              };
+                                              setLocalSettings({...localSettings, updateGracePeriod: newGrace});
+                                          }}
+                                          className="w-full p-2 rounded-lg border border-green-100 text-sm text-center font-bold"
+                                          min="0"
+                                          placeholder="D"
+                                      />
+                                      <p className="text-[9px] text-green-600 text-center mt-1 uppercase">days</p>
+                                  </div>
+                                  <div>
+                                      <input
+                                          type="number"
+                                          value={localSettings.updateGracePeriod?.hours || 0}
+                                          onChange={e => {
+                                              const val = Math.max(0, parseInt(e.target.value) || 0);
+                                              const newGrace = {
+                                                  ...(localSettings.updateGracePeriod || { days: 0, hours: 0, minutes: 0, seconds: 0 }),
+                                                  hours: val
+                                              };
+                                              setLocalSettings({...localSettings, updateGracePeriod: newGrace});
+                                          }}
+                                          className="w-full p-2 rounded-lg border border-green-100 text-sm text-center font-bold"
+                                          min="0"
+                                          placeholder="H"
+                                      />
+                                      <p className="text-[9px] text-green-600 text-center mt-1 uppercase">hours</p>
+                                  </div>
+                                  <div>
+                                      <input
+                                          type="number"
+                                          value={localSettings.updateGracePeriod?.minutes || 0}
+                                          onChange={e => {
+                                              const val = Math.max(0, parseInt(e.target.value) || 0);
+                                              const newGrace = {
+                                                  ...(localSettings.updateGracePeriod || { days: 0, hours: 0, minutes: 0, seconds: 0 }),
+                                                  minutes: val
+                                              };
+                                              setLocalSettings({...localSettings, updateGracePeriod: newGrace});
+                                          }}
+                                          className="w-full p-2 rounded-lg border border-green-100 text-sm text-center font-bold"
+                                          min="0"
+                                          placeholder="M"
+                                      />
+                                      <p className="text-[9px] text-green-600 text-center mt-1 uppercase">minutes</p>
+                                  </div>
+                                  <div>
+                                      <input
+                                          type="number"
+                                          value={localSettings.updateGracePeriod?.seconds || 0}
+                                          onChange={e => {
+                                              const val = Math.max(0, parseInt(e.target.value) || 0);
+                                              const newGrace = {
+                                                  ...(localSettings.updateGracePeriod || { days: 0, hours: 0, minutes: 0, seconds: 0 }),
+                                                  seconds: val
+                                              };
+                                              setLocalSettings({...localSettings, updateGracePeriod: newGrace});
+                                          }}
+                                          className="w-full p-2 rounded-lg border border-green-100 text-sm text-center font-bold"
+                                          min="0"
+                                          placeholder="S"
+                                      />
+                                      <p className="text-[9px] text-green-600 text-center mt-1 uppercase">seconds</p>
+                                  </div>
+                              </div>
+                          </div>
+
+                          {/* POPUP RECURRENCE */}
+                          <div className="bg-white p-3 rounded-xl border border-green-200">
+                              <label className="text-[10px] font-bold text-green-700 uppercase mb-2 block">Popup Frequency (Show Every)</label>
+                              <div className="flex gap-2">
+                                  <input
+                                      type="number"
+                                      value={localSettings.updatePopupFrequency?.value || 0}
+                                      onChange={e => {
+                                          const val = Math.max(0, parseInt(e.target.value) || 0);
+                                          const newFreq = {
+                                              unit: 'hours',
+                                              ...(localSettings.updatePopupFrequency || {}),
+                                              value: val
+                                          };
+                                          // @ts-ignore
+                                          setLocalSettings({...localSettings, updatePopupFrequency: newFreq});
+                                      }}
+                                      className="flex-1 p-2 rounded-lg border border-green-100 text-sm font-bold"
+                                      min="0"
+                                      placeholder="Value"
+                                  />
+                                  <select
+                                      value={localSettings.updatePopupFrequency?.unit || 'hours'}
+                                      onChange={e => {
+                                          const newFreq = {
+                                              value: 0,
+                                              ...(localSettings.updatePopupFrequency || {}),
+                                              unit: e.target.value
+                                          };
+                                          // @ts-ignore
+                                          setLocalSettings({...localSettings, updatePopupFrequency: newFreq});
+                                      }}
+                                      className="flex-1 p-2 rounded-lg border border-green-100 text-sm font-bold bg-white"
+                                  >
+                                      {['seconds', 'minutes', 'hours', 'days', 'months', 'years'].map(u => (
+                                          <option key={u} value={u}>{u.toUpperCase()}</option>
+                                      ))}
+                                  </select>
+                              </div>
+                          </div>
+
+                          <div>
+                              <label className="text-[10px] font-bold text-green-700 uppercase">Auto-Close Duration (Sec)</label>
+                              <input
+                                  type="number"
+                                  value={localSettings.updatePopupDurationSeconds || 0}
+                                  onChange={e => setLocalSettings({...localSettings, updatePopupDurationSeconds: parseInt(e.target.value)})}
+                                  className="w-full p-2 rounded-lg border border-green-200 text-sm"
+                                  min="0"
+                              />
+                              <p className="text-[9px] text-green-600 mt-1">0 = Stays until closed.</p>
+                          </div>
+                          <label className="flex items-center gap-2 cursor-pointer mt-4 p-2 bg-white rounded-lg border border-green-100">
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.forceUpdate}
+                                  onChange={e => setLocalSettings({...localSettings, forceUpdate: e.target.checked})}
+                                  className="w-5 h-5 accent-green-600"
+                              />
+                              <span className="text-sm font-bold text-slate-700">Require Force Update</span>
+                          </label>
+                      </div>
+                  </div>
+
+                  <div className="space-y-6">
+                      <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                          <h4 className="font-bold text-slate-800 flex items-center gap-2 mb-4"><Monitor size={18} /> Update Mechanics</h4>
+                          <ul className="text-xs text-slate-600 space-y-3">
+                              <li className="flex items-start gap-2">
+                                  <CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" />
+                                  <span><b>Version Match:</b> If a user's app version doesn't match the one set here, they see an update notice.</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                  <CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" />
+                                  <span><b>Grace Period:</b> The countdown begins exactly on the 'Launch Date'.</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                  <CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" />
+                                  <span><b>Force Update:</b> If checked OR if grace period expires, the app is locked until updated.</span>
+                              </li>
+                          </ul>
+                      </div>
+
+                      <button onClick={() => handleSaveSettings()} className="w-full px-6 py-4 bg-green-600 text-white font-bold rounded-2xl shadow-xl hover:bg-green-700 flex items-center justify-center gap-2 text-lg">
+                          <Save size={24} /> Deploy Update
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* 5. UTILITY TABS */}
       {activeTab === 'DEMAND' && (

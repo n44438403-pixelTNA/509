@@ -713,6 +713,17 @@ export const ALL_FEATURES: Feature[] = [
         color: 'pink'
     },
     {
+        id: 'ADMIN_DEPLOY',
+        label: 'App Update',
+        group: 'ADVANCED',
+        surfaceLevel: 3,
+        adminVisible: true,
+        adminTab: 'DEPLOY',
+        requiresSuperAdmin: true,
+        icon: 'Cloud',
+        color: 'sky'
+    },
+    {
         id: 'ADMIN_DATABASE',
         label: 'Database',
         group: 'ADVANCED',
