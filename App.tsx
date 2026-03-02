@@ -7,6 +7,8 @@ import { getChapterData, saveChapterData, checkFirebaseConnection, saveTestResul
 import { recalculateSubscriptionStatus, addSubscription } from './utils/subscriptionUtils';
 import { signInAnonymously } from 'firebase/auth';
 import { fetchChapters, fetchLessonContent } from './services/groq';
+import { Onboarding }
+from './components/Onboarding';
 import { BoardSelection } from './components/BoardSelection';
 import { ClassSelection } from './components/ClassSelection';
 import { SubjectSelection } from './components/SubjectSelection';
@@ -791,6 +793,10 @@ const App: React.FC = () => {
 
         let initialView = (user.role === 'ADMIN' || user.role === 'SUB_ADMIN') ? 'ADMIN_DASHBOARD' : 'STUDENT_DASHBOARD';
         
+        if (user.role === 'STUDENT' && (!user.board || !user.classLevel)) {
+             initialView = 'ONBOARDING';
+        }
+
         // RESET CLASS IF LOCKED (e.g. Competition Mode)
         let safeClass = user.classLevel || null;
         const freeModes = loadedSettings.appMode?.allowedModesForFree || ['SCHOOL'];
@@ -976,14 +982,24 @@ const App: React.FC = () => {
     }
   }, [state.user?.id, state.view, state.settings]);
 
-  const handleLogin = (user: User) => {
-    // console.log("Login successful, user:", user);
-    // Only save if NOT impersonating
+    const handleLogin = (user: User) => {
     if (!state.originalAdmin) {
         localStorage.setItem('nst_current_user', JSON.stringify(user));
     }
-    saveUserToLive(user); // छात्र का डेटा क्लाउड पर भेजें
+    saveUserToLive(user);
     localStorage.setItem('nst_has_seen_welcome', 'true');
+
+    // Check if onboarding is needed
+    if (user.role === 'STUDENT' && (!user.board || !user.classLevel)) {
+        setState(prev => ({
+          ...prev,
+          user,
+          view: 'ONBOARDING',
+          showWelcome: false
+        }));
+        return;
+    }
+
     setState(prev => ({ 
       ...prev, 
       user, 
@@ -2268,6 +2284,7 @@ const App: React.FC = () => {
                 )}
                 
                 {(!activeWeeklyTest && state.view === 'BOARDS') && <BoardSelection onSelect={handleBoardSelect} onBack={goBack} />}
+                {state.view === 'ONBOARDING' && state.user && <Onboarding user={state.user} onComplete={handleLogin} onLogout={handleLogout} />}
                 {state.view === 'CLASSES' && <ClassSelection selectedBoard={state.selectedBoard} allowedClasses={state.user?.role === 'ADMIN' ? undefined : state.settings.allowedClasses} settings={state.settings} user={state.user} onSelect={handleClassSelect} onBack={goBack} />}
                 {state.view === 'STREAMS' && <StreamSelection onSelect={handleStreamSelect} onBack={goBack} />}
                 {state.view === 'SUBJECTS' && state.selectedClass && <SubjectSelection classLevel={state.selectedClass} stream={state.selectedStream} board={state.selectedBoard || undefined} onSelect={handleSubjectSelect} onBack={goBack} />}

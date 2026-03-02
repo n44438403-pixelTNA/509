@@ -382,6 +382,17 @@ export const ALL_FEATURES: Feature[] = [
         icon: 'Book',
         color: 'emerald'
     },
+    {
+        id: 'ADMIN_STORE',
+        label: 'Store Manager',
+        group: 'CORE',
+        surfaceLevel: 3,
+        adminVisible: true,
+        adminTab: 'STORE_MANAGER',
+        requiredPermission: 'MANAGE_SETTINGS',
+        icon: 'ShoppingBag',
+        color: 'purple'
+    },
 
     // --- NOTIFICATION & REQUESTS GROUP ---
     {
@@ -690,17 +701,7 @@ export const ALL_FEATURES: Feature[] = [
         icon: 'RotateCcw',
         color: 'indigo'
     },
-    {
-        id: 'ADMIN_FEATURE_ACCESS',
-        label: 'Feature Access',
-        group: 'ADVANCED',
-        surfaceLevel: 3,
-        adminVisible: true,
-        adminTab: 'FEATURE_ACCESS',
-        requiredPermission: 'MANAGE_SETTINGS',
-        icon: 'LayoutGrid',
-        color: 'cyan'
-    },
+
     {
         id: 'ADMIN_CODES',
         label: 'Gift Codes',
