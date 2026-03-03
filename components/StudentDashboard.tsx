@@ -533,6 +533,16 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
           const currentPriority = tierPriority[user.subscriptionTier || 'FREE'] || 0;
           const newPriority = tierPriority[tier] || 0;
 
+              // Force to FREE if subscription ended
+              if (cloudData.isPremium && cloudData.subscriptionEndDate && cloudData.subscriptionTier !== 'LIFETIME') {
+                  if (new Date(cloudData.subscriptionEndDate) < new Date()) {
+                      cloudData.isPremium = false;
+                      cloudData.subscriptionTier = 'FREE';
+                      cloudData.subscriptionLevel = undefined;
+                      needsUpdate = true;
+                  }
+              }
+
           if (isActive && currentPriority > newPriority) {
                // User already has a BETTER active plan, do NOT override tier, just extend date if not lifetime
                if (user.subscriptionTier !== 'LIFETIME') {
@@ -587,6 +597,15 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
             const currentUser = userRef.current;
             const needsUpdate = cloudData.credits !== currentUser.credits || cloudData.subscriptionTier !== currentUser.subscriptionTier || cloudData.isPremium !== currentUser.isPremium || cloudData.isGameBanned !== currentUser.isGameBanned || (cloudData.mcqHistory?.length || 0) > (currentUser.mcqHistory?.length || 0);
             if (needsUpdate) {
+                  // Handle expired subscriptions dynamically
+                  if (cloudData.isPremium && cloudData.subscriptionEndDate && cloudData.subscriptionTier !== 'LIFETIME') {
+                      if (new Date(cloudData.subscriptionEndDate) < new Date()) {
+                          cloudData.isPremium = false;
+                          cloudData.subscriptionTier = 'FREE';
+                          cloudData.subscriptionLevel = undefined;
+                      }
+                  }
+
                 let protectedSub = { tier: cloudData.subscriptionTier, level: cloudData.subscriptionLevel, endDate: cloudData.subscriptionEndDate, isPremium: cloudData.isPremium };
                 const localTier = currentUser.subscriptionTier || 'FREE';
                 const cloudTier = cloudData.subscriptionTier || 'FREE';
