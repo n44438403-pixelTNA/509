@@ -536,18 +536,18 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
             <HelpCircle size={24} />
         </button>
 
-        <div className="text-center mb-8 relative z-10">
-          <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl ring-4 ring-blue-50 animate-bounce-slow p-2 overflow-hidden">
+        <div className="text-center mb-8 relative z-10 mt-6">
+          <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_40px_rgba(59,130,246,0.15)] ring-4 ring-slate-50 p-1 overflow-hidden">
               {settings?.appLogo ? (
-                  <img src={settings.appLogo} alt="App Logo" className="w-full h-full object-contain" />
+                  <img src={settings.appLogo} alt="App Logo" className="w-full h-full object-cover rounded-full" />
               ) : (
-                  <h1 className="text-5xl font-black text-blue-600">{settings?.appShortName || 'IIC'}</h1>
+                  <h1 className="text-5xl font-black text-blue-600">{settings?.appShortName || 'NSTA'}</h1>
               )}
           </div>
-          <h1 className="text-3xl font-black text-slate-900 mb-1 tracking-tight leading-none text-wrap max-w-xs mx-auto">
-              {settings?.appName || 'IDEAL INSPIRATION CLASSES'}
+          <h1 className="text-[2.5rem] font-black text-[#111827] mb-1 tracking-tight leading-none mx-auto mt-6">
+              {settings?.appShortName || 'NSTA'}
           </h1>
-          <p className="text-slate-400 font-bold tracking-[0.2em] text-[10px] uppercase mt-2">The Future of Learning</p>
+          <p className="text-[#64748b] font-bold tracking-[0.15em] text-[10px] uppercase mt-3">The Future of Learning</p>
         </div>
 
         {view !== 'HOME' && (
@@ -576,25 +576,17 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
         )}
 
         {view === 'HOME' && (
-            <div className="space-y-4 relative z-10 animate-in fade-in">
-                 <button type="button" onClick={handleGoogleAuth} className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm border border-slate-300">
+            <div className="space-y-6 relative z-10 animate-in fade-in mt-10">
+                 <button type="button" onClick={handleGoogleAuth} className="w-full bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1e293b] font-bold py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all active:scale-95">
                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                      Continue with Google
                  </button>
 
-                 <div className="flex items-center gap-4 my-3 opacity-0">
-                     <div className="flex-1 h-px bg-slate-200"></div>
-                 </div>
-
-                 <button type="button" onClick={() => setView('SIGNUP')} className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm border border-slate-300">
+                 <button type="button" onClick={() => setView('SIGNUP')} className="w-full bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1e293b] font-bold py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all active:scale-95">
                      Sign up
                  </button>
 
-                 <div className="flex items-center gap-4 my-3 opacity-0">
-                     <div className="flex-1 h-px bg-slate-200"></div>
-                 </div>
-
-                 <button type="button" onClick={() => setView('LOGIN')} className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm border border-slate-300">
+                 <button type="button" onClick={() => setView('LOGIN')} className="w-full bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1e293b] font-bold py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all active:scale-95">
                      Log in
                  </button>
             </div>
