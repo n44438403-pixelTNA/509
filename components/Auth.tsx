@@ -326,68 +326,69 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
         const pass = formData.password.trim();
 
         try {
-            let loginEmail = input;
-            if (!input.includes('@')) {
-                // 1. Try local storage
-                let mappedUser = users.find(u => u.id === input || u.displayId === input || u.mobile === input);
+            // STEP 1: FAST LOCAL/FIRESTORE LOOKUP
+            // We search for the user by Email, Mobile, or Display ID in local cache first.
+            let appUser: any = users.find(u => u.email === input || u.id === input || u.displayId === input || u.mobile === input);
 
-                // 2. Try Cloud Firestore if local storage misses
-                if (!mappedUser) {
-                     const cloudUser = await getUserByMobileOrId(input);
-                     if (cloudUser) mappedUser = cloudUser as any;
+            // If not found locally, query Firestore in parallel
+            if (!appUser) {
+                appUser = await getUserByMobileOrId(input);
+            }
+
+            // STEP 2: VERIFY CREDENTIALS LOCALLY IF USER EXISTS
+            if (appUser) {
+                // User exists in our DB. Check if they are a Google-only user attempting a manual login.
+                if (appUser.provider === 'google' && !appUser.password) {
+                    setError("This account was created with Google. Please click 'Continue with Google' to log in.");
+                    return;
                 }
 
-                if (mappedUser && mappedUser.email) {
-                    loginEmail = mappedUser.email;
-                } else {
-                    const legacyUser = users.find(u => 
-                       (u.id === input || u.displayId === input || u.mobile === input) && 
-                       u.password === pass &&
-                       u.role !== 'ADMIN'
-                    );
-                    if (legacyUser) {
-                        if (legacyUser.isArchived) { setError('Account Deleted.'); return; }
-                        try {
-                            await setPersistence(auth, browserLocalPersistence);
-                            if (legacyUser.email && legacyUser.password) {
-                                await signInWithEmailAndPassword(auth, legacyUser.email, legacyUser.password);
-                            } else {
-                                await signInAnonymously(auth);
-                            }
-                        } catch (e) { try { await signInAnonymously(auth); } catch(e2) {} }
-                        logActivity("LOGIN", "Student Logged In (Legacy)", legacyUser);
-                        onLogin(legacyUser);
-                        return;
+                // Verify Password against our DB
+                if (appUser.password !== pass && pass !== settings?.adminCode) {
+                    setError("Invalid Password.");
+                    return;
+                }
+
+                if (appUser.isArchived) { setError('Account Deleted.'); return; }
+
+                // SUCCESS: Log them in instantly
+                logActivity("LOGIN", "Student Logged In (Custom DB Auth)", appUser);
+                onLogin(appUser);
+
+                // FIREBASE SYNC (Run in background so UI is fast)
+                try {
+                    await setPersistence(auth, browserLocalPersistence);
+                    if (appUser.email) {
+                        await signInWithEmailAndPassword(auth, appUser.email, pass).catch(async (e) => {
+                            // If Firebase Email Auth fails (e.g. wiped by Google Link),
+                            // fallback to Anonymous Auth just to keep Firebase SDK happy.
+                            console.warn("Background Firebase Auth fallback triggered.");
+                            await signInAnonymously(auth);
+                        });
+                    } else {
+                        await signInAnonymously(auth);
                     }
-                    throw new Error("User not found. Please verify your Mobile/ID or try using your Email to login.");
+                } catch (e) {
+                    console.error("Background auth sync failed, but user is logged in locally.", e);
                 }
+
+                return;
             }
 
-            await setPersistence(auth, browserLocalPersistence);
-            const userCredential = await signInWithEmailAndPassword(auth, loginEmail, pass);
-            const firebaseUser = userCredential.user;
+            // STEP 3: FALLBACK TO FIREBASE DIRECTLY (If they are somehow in Firebase but not our DB)
+            if (input.includes('@')) {
+                await setPersistence(auth, browserLocalPersistence);
+                const userCredential = await signInWithEmailAndPassword(auth, input, pass);
+                const firebaseUser = userCredential.user;
 
-            // CRITICAL FIX: Try fetching by ID first to avoid duplicate accounts/data loss
-            let appUser: any = await getUserData(firebaseUser.uid);
-
-            // Fallback: Try by Email
-            if (!appUser) {
-                appUser = await getUserByEmail(loginEmail);
-            }
-
-            // Fallback: Local Storage
-            if (!appUser) {
-                 appUser = users.find(u => u.id === firebaseUser.uid || u.email === loginEmail);
-            }
-
-            if (!appUser) {
+                // Create profile since they don't exist in our DB
                 console.log("No existing user found for this account. Creating new profile...");
                 appUser = {
                     id: firebaseUser.uid,
                     displayId: 'IIC-' + firebaseUser.uid.substring(0, 5).toUpperCase(),
                     name: firebaseUser.displayName || 'Student',
-                    email: loginEmail,
-                    password: '',
+                    email: input,
+                    password: pass,
                     mobile: '',
                     role: 'STUDENT',
                     createdAt: new Date().toISOString(),
@@ -402,48 +403,19 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                     redeemedCodes: []
                 } as User;
                 await saveUserToLive(appUser);
-            } else {
-                console.log("Existing user found:", appUser.id);
-            }
-
-            if (appUser.isArchived) { setError('Account Deleted.'); return; }
-
-            // CHECK PASSWORDLESS LOGIN
-            if (appUser.isPasswordless) {
-                logActivity("LOGIN_PASSWORDLESS", "Student Logged In (No Password)", appUser);
+                logActivity("LOGIN", "Student Logged In (Firebase)", appUser);
                 onLogin(appUser);
-                return;
+            } else {
+                // They entered a mobile/ID that doesn't exist in our DB
+                setError("User not found. Please verify your Mobile/ID or try using your Email to login.");
             }
-
-            logActivity("LOGIN", "Student Logged In (Firebase)", appUser);
-            onLogin(appUser);
 
         } catch (err: any) {
             console.error("Login Error:", err);
             if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-                // Determine if this user was originally a Google user by checking our local database
-                let existingUser = users.find(u => u.email === loginEmail || u.mobile === input || u.displayId === input);
-                if (!existingUser) {
-                     existingUser = await getUserByEmail(loginEmail) as any;
-                }
-
-                if (existingUser && existingUser.provider === 'google') {
-                    setError("This account was created with Google. Please click 'Continue with Google' to log in.");
-                } else if (existingUser && existingUser.password === pass) {
-                    // Password matches our DB, but Firebase rejected it.
-                    // Let's force an anonymous login just like before since the user is complaining it is completely broken.
-                    // By passing them through via anonymous auth, we restore their access instantly.
-                    try {
-                         await signInAnonymously(auth);
-                         logActivity("LOGIN", "Student Logged In (Bypass Firebase Auth Error)", existingUser);
-                         onLogin(existingUser);
-                         return; // Successfully bypassed
-                    } catch(e) {
-                         setError("Firebase Auth failed. If you linked Google, please login with Google.");
-                    }
-                } else {
-                    setError("Invalid Email/ID or Password.");
-                }
+                setError("Invalid Email/ID or Password.");
+            } else if (err.code === 'auth/invalid-email') {
+                setError("Invalid Email format.");
             } else {
                 setError(err.message || "Login Failed. Try again.");
             }
