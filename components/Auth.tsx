@@ -573,34 +573,26 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
 
         {view === 'HOME' && (
             <div className="space-y-4 relative z-10 animate-in fade-in">
-                 <button type="button" onClick={handleGoogleAuth} className="w-full bg-white border border-slate-200 text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 hover:bg-slate-50 transition-colors shadow-sm">
+                 <button type="button" onClick={handleGoogleAuth} className="w-full bg-white text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 hover:bg-slate-50 transition-all shadow-md active:scale-95 border-2 border-transparent">
                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                      Continue with Google
                  </button>
 
-                 <div className="flex items-center gap-4 my-6">
+                 <div className="flex items-center gap-4 my-3 opacity-0">
                      <div className="flex-1 h-px bg-slate-200"></div>
                  </div>
 
-                 <button type="button" onClick={() => setView('SIGNUP')} className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-4 rounded-full transition-colors">
+                 <button type="button" onClick={() => setView('SIGNUP')} className="w-full bg-slate-300 hover:bg-slate-400 text-slate-900 font-black py-4 rounded-full transition-all active:scale-95 shadow-sm">
                      Sign up
                  </button>
 
-                 <div className="flex items-center gap-4 my-6">
-                     <div className="flex-1 h-px bg-slate-200"></div>
-                     <span className="text-xs font-bold text-slate-400 uppercase">OR</span>
+                 <div className="flex items-center gap-4 my-3 opacity-0">
                      <div className="flex-1 h-px bg-slate-200"></div>
                  </div>
 
-                 <button type="button" onClick={() => setView('LOGIN')} className="w-full bg-transparent border border-slate-300 text-slate-800 font-bold py-4 rounded-full hover:bg-slate-50 transition-colors">
+                 <button type="button" onClick={() => setView('LOGIN')} className="w-full bg-transparent border-2 border-slate-300 text-slate-800 font-bold py-4 rounded-full hover:bg-slate-50 hover:border-slate-400 transition-all active:scale-95">
                      Log in
                  </button>
-
-                 <div className="mt-8 text-center">
-                    <button onClick={() => setView('ADMIN')} className="text-slate-400 hover:text-slate-600 text-xs font-bold transition-colors">
-                        Admin Login
-                    </button>
-                 </div>
             </div>
         )}
 
@@ -684,9 +676,16 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                 </button>
             </div>
         )}
+        {view === 'LOGIN' && (
+            <div className="mt-8 text-center border-t border-slate-100 pt-6">
+                <button onClick={() => setView('ADMIN')} className="text-slate-300 hover:text-slate-500 text-xs font-bold transition-colors">
+                    Admin Access
+                </button>
+            </div>
+        )}
         {(view === 'SIGNUP' || view === 'ADMIN' || view === 'RECOVERY' || view === 'LOGIN') && (
-            <div className="mt-4 text-center">
-                <button onClick={() => setView('HOME')} className="text-slate-500 font-bold text-sm">Go Back</button>
+            <div className="mt-4 text-center pb-4">
+                <button onClick={() => setView('HOME')} className="text-slate-500 font-bold text-sm hover:text-slate-800 transition-colors">Go Back</button>
             </div>
         )}
       </div>
