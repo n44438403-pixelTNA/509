@@ -62,7 +62,6 @@ export const DEFAULT_APP_FEATURES = [
     { id: 'f24', title: 'PDF Watermarking', enabled: true, order: 24 },
     { id: 'f25', title: 'Auto-Sync', enabled: true, order: 25 },
     { id: 'f26', title: 'Offline Capabilities', enabled: true, order: 26 },
-    { id: 'f27', title: 'Guest Access', enabled: true, order: 27 },
     { id: 'f28', title: 'Passwordless Login', enabled: true, order: 28 },
     { id: 'f29', title: 'Custom Subjects', enabled: true, order: 29 },
     { id: 'f30', title: 'Gift Codes', enabled: true, order: 30 },
@@ -294,7 +293,6 @@ export const ALL_APP_FEATURES = [
     { id: 'f23', title: 'Responsive Design', enabled: true },
     { id: 'f25', title: 'Auto-Sync', enabled: true },
     { id: 'f26', title: 'Offline Capabilities', enabled: true },
-    { id: 'f27', title: 'Guest Access', enabled: true },
     { id: 'f28', title: 'Passwordless Login', enabled: true },
     { id: 'f29', title: 'Custom Subjects', enabled: true },
     { id: 'f30', title: 'Gift Codes', enabled: true },
@@ -467,7 +465,6 @@ export const DEFAULT_PLAN_COMPARISON = [
             { id: 'ADDITIONAL_NOTES', name: "Additional Resources", free: "❌ Locked", basic: "✅ Yes", ultra: "✅ Yes" },
             { id: 'SEARCH', name: "Search Capability", free: "✅ Basic", basic: "✅ Advanced", ultra: "✅ Advanced" },
             { id: 'OFFLINE_SYNC', name: "Save / Offline Mode", free: "❌ No", basic: "✅ Yes", ultra: "✅ Yes" },
-            { id: 'WATERMARK', name: "PDF Watermark", free: "⚠️ Free User", basic: "❌ No", ultra: "❌ No" }
         ]
     },
     {
@@ -535,7 +532,6 @@ export const DEFAULT_PLAN_COMPARISON = [
     {
         name: "8. ACCOUNT & SECURITY",
         features: [
-            { id: 'GUEST_MODE', name: "Guest Mode", free: "✅ Yes", basic: "❌ No", ultra: "❌ No" },
             { id: 'DEVICE_LIMIT', name: "Device Login Limit", free: "1 Device", basic: "1 Device", ultra: "Multi-Device" },
             { id: 'GHOST_LOGIN', name: "Ghost Login (Admin)", free: "❌ No", basic: "❌ No", ultra: "✅ Yes" },
             { id: 'PROFILE_EDIT', name: "Profile Edit", free: "Basic Info", basic: "Full Profile", ultra: "Full Profile" }
