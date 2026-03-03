@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Board, ClassLevel, Stream, SystemSettings, RecoveryRequest } from '../types';
 import { ADMIN_EMAIL } from '../constants';
-import { saveUserToLive, auth, getUserByEmail, rtdb, getUserData } from '../firebase';
+import { saveUserToLive, auth, getUserByEmail, getUserByMobileOrId, rtdb, getUserData } from '../firebase';
 import { ref, set } from "firebase/database";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { UserPlus, LogIn, Lock, User as UserIcon, Phone, Mail, ShieldCheck, ArrowRight, School, GraduationCap, Layers, KeyRound, Copy, Check, AlertTriangle, XCircle, MessageCircle, Send, RefreshCcw, ShieldAlert, HelpCircle } from 'lucide-react';
@@ -328,7 +328,15 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
         try {
             let loginEmail = input;
             if (!input.includes('@')) {
-                const mappedUser = users.find(u => u.id === input || u.displayId === input || u.mobile === input);
+                // 1. Try local storage
+                let mappedUser = users.find(u => u.id === input || u.displayId === input || u.mobile === input);
+
+                // 2. Try Cloud Firestore if local storage misses
+                if (!mappedUser) {
+                     const cloudUser = await getUserByMobileOrId(input);
+                     if (cloudUser) mappedUser = cloudUser as any;
+                }
+
                 if (mappedUser && mappedUser.email) {
                     loginEmail = mappedUser.email;
                 } else {
@@ -351,7 +359,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                         onLogin(legacyUser);
                         return;
                     }
-                    throw new Error("User not found. Please use Email to Login if you just signed up.");
+                    throw new Error("User not found. Please verify your Mobile/ID or try using your Email to login.");
                 }
             }
 
@@ -414,7 +422,11 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
             console.error("Login Error:", err);
             if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
                 // Determine if this user was originally a Google user by checking our local database
-                const existingUser = users.find(u => u.email === loginEmail || u.mobile === input || u.displayId === input);
+                let existingUser = users.find(u => u.email === loginEmail || u.mobile === input || u.displayId === input);
+                if (!existingUser) {
+                     existingUser = await getUserByEmail(loginEmail) as any;
+                }
+
                 if (existingUser && existingUser.provider === 'google') {
                     setError("This account was created with Google. Please click 'Continue with Google' to log in.");
                 } else if (existingUser && existingUser.password === pass) {

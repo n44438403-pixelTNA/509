@@ -190,6 +190,24 @@ export const getUserByEmail = async (email: string) => {
     } catch (e) { console.error(e); return null; }
 };
 
+export const getUserByMobileOrId = async (input: string) => {
+    try {
+        // Try mobile
+        let q = query(collection(db, "users"), where("mobile", "==", input));
+        let querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            return querySnapshot.docs[0].data();
+        }
+        // Try displayId
+        q = query(collection(db, "users"), where("displayId", "==", input));
+        querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            return querySnapshot.docs[0].data();
+        }
+        return null;
+    } catch (e) { console.error(e); return null; }
+};
+
 // 2. System Settings Sync
 export const getSystemSettings = async () => {
     try {
