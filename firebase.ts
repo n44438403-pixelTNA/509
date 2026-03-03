@@ -192,18 +192,21 @@ export const getUserByEmail = async (email: string) => {
 
 export const getUserByMobileOrId = async (input: string) => {
     try {
-        // Try mobile
-        let q = query(collection(db, "users"), where("mobile", "==", input));
-        let querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            return querySnapshot.docs[0].data();
-        }
-        // Try displayId
-        q = query(collection(db, "users"), where("displayId", "==", input));
-        querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty) {
-            return querySnapshot.docs[0].data();
-        }
+        // Run parallel queries to speed up lookup
+        const qMobile = query(collection(db, "users"), where("mobile", "==", input));
+        const qDisplayId = query(collection(db, "users"), where("displayId", "==", input));
+        const qEmail = query(collection(db, "users"), where("email", "==", input));
+
+        const [snapMobile, snapId, snapEmail] = await Promise.all([
+            getDocs(qMobile),
+            getDocs(qDisplayId),
+            getDocs(qEmail)
+        ]);
+
+        if (!snapMobile.empty) return snapMobile.docs[0].data();
+        if (!snapId.empty) return snapId.docs[0].data();
+        if (!snapEmail.empty) return snapEmail.docs[0].data();
+
         return null;
     } catch (e) { console.error(e); return null; }
 };
