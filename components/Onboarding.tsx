@@ -12,14 +12,26 @@ interface Props {
 export const Onboarding: React.FC<Props> = ({ user, onComplete, onLogout }) => {
   const [step, setStep] = useState(1);
   const [name, setName] = useState(user.name || '');
+  const [mobile, setMobile] = useState(user.mobile || '');
+  const [password, setPassword] = useState('');
   const [board, setBoard] = useState<Board | ''>('');
   const [classLevel, setClassLevel] = useState<ClassLevel | ''>('');
   const [stream, setStream] = useState<Stream | ''>('');
   const [isSaving, setIsSaving] = useState(false);
 
+  const isGoogleUser = user.provider === 'google' && !user.password;
+
   const handleNext = () => {
       if (step === 1 && !name.trim()) {
           alert('Please enter your name.');
+          return;
+      }
+      if (step === 1 && isGoogleUser && mobile.length !== 10) {
+          alert('Please enter a valid 10-digit mobile number.');
+          return;
+      }
+      if (step === 1 && isGoogleUser && password.length < 8) {
+          alert('Please set a password (min 8 characters).');
           return;
       }
       if (step === 1 && !board) {
@@ -53,6 +65,11 @@ export const Onboarding: React.FC<Props> = ({ user, onComplete, onLogout }) => {
               stream: stream ? (stream as Stream) : undefined,
               profileCompleted: true
           };
+
+          if (isGoogleUser) {
+              updatedUser.mobile = mobile;
+              updatedUser.password = password;
+          }
 
           await saveUserToLive(updatedUser);
 
@@ -114,17 +131,47 @@ export const Onboarding: React.FC<Props> = ({ user, onComplete, onLogout }) => {
           <div className="p-8 pt-6 flex-1 min-h-[300px]">
               {step === 1 && (
                   <div className="animate-in slide-in-from-right fade-in duration-300">
-                      <div className="mb-6">
-                          <label className="text-sm font-bold text-slate-700 block mb-2">Full Name</label>
-                          <input
-                              type="text"
-                              value={name}
-                              onChange={(e) => setName(e.target.value)}
-                              placeholder="Enter your full name"
-                              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
+                      <div className="mb-6 space-y-4">
+                          <div>
+                              <label className="text-sm font-bold text-slate-700 block mb-2">Full Name</label>
+                              <input
+                                  type="text"
+                                  value={name}
+                                  onChange={(e) => setName(e.target.value)}
+                                  placeholder="Enter your full name"
+                                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-800"
+                              />
+                          </div>
+
+                          {isGoogleUser && (
+                              <div className="p-4 bg-orange-50 rounded-xl border border-orange-100 space-y-4">
+                                  <p className="text-xs text-orange-800 font-bold flex items-center gap-2">
+                                      <span>Account Setup Required</span>
+                                  </p>
+                                  <div>
+                                      <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Mobile Number</label>
+                                      <input
+                                          type="tel"
+                                          value={mobile}
+                                          onChange={(e) => setMobile(e.target.value.replace(/\D/g, '').slice(0,10))}
+                                          placeholder="10-digit mobile number"
+                                          className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none font-bold"
+                                      />
+                                  </div>
+                                  <div>
+                                      <label className="text-[10px] font-bold text-slate-500 block mb-1 uppercase">Set Password</label>
+                                      <input
+                                          type="password"
+                                          value={password}
+                                          onChange={(e) => setPassword(e.target.value)}
+                                          placeholder="Minimum 8 characters"
+                                          className="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none font-bold"
+                                      />
+                                  </div>
+                              </div>
+                          )}
                       </div>
-                      <div className="flex items-center gap-3 mb-6 mt-6">
+                      <div className="flex items-center gap-3 mb-6 mt-6 pt-4 border-t border-slate-100">
                           <Target className="text-blue-500" size={24} />
                           <h2 className="text-lg font-bold text-slate-800">Select Your Board</h2>
                       </div>
