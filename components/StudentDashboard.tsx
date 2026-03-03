@@ -153,15 +153,19 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
       const checkPopups = () => {
           const now = Date.now();
 
-          // 1. Expiry Warning
-          if (settings?.popupConfigs?.isExpiryWarningEnabled && user.isPremium && user.subscriptionEndDate) {
+          const gm = settings?.globalPopupManager;
+
+          // 1. Expiry Warning (Fallback to legacy if gm not set)
+          const expiryEnabled = gm ? gm.expiryPopup?.enabled : settings?.popupConfigs?.isExpiryWarningEnabled;
+          const expiryThreshold = gm ? (gm.expiryPopup?.triggerHoursBeforeExpiry || 48) : (settings?.popupConfigs?.expiryWarningHours || 24);
+
+          if (expiryEnabled && user.isPremium && user.subscriptionEndDate) {
              const end = new Date(user.subscriptionEndDate).getTime();
              const diffHours = (end - now) / (1000 * 60 * 60);
-             const threshold = settings.popupConfigs.expiryWarningHours || 24;
-             if (diffHours > 0 && diffHours <= threshold) {
+             if (diffHours > 0 && diffHours <= expiryThreshold) {
                  const lastShown = parseInt(localStorage.getItem(`last_expiry_warn_${user.id}`) || '0');
-                 const interval = (settings.popupConfigs.expiryWarningIntervalMinutes || 60) * 60 * 1000;
-                 if (now - lastShown > interval) {
+                 // Check if we already showed it today
+                 if (now - lastShown > 24 * 60 * 60 * 1000) {
                      showAlert(`⚠️ Your subscription expires in ${Math.ceil(diffHours)} hours! Renew now to keep uninterrupted access.`, "INFO", "Expiry Warning");
                      localStorage.setItem(`last_expiry_warn_${user.id}`, now.toString());
                      return; // Show one at a time
@@ -169,10 +173,13 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
              }
           }
 
-          // 2. Upsell Promotion
-          if (settings?.popupConfigs?.isUpsellEnabled && user.subscriptionLevel !== 'ULTRA') {
+          // 2. Feature/Upsell Promotion (Fallback to legacy)
+          const upsellEnabled = gm ? gm.featurePopup?.enabled : settings?.popupConfigs?.isUpsellEnabled;
+          const upsellIntervalHours = gm ? (gm.featurePopup?.intervalHours || 24) : (settings?.popupConfigs?.upsellPopupIntervalMinutes ? settings.popupConfigs.upsellPopupIntervalMinutes / 60 : 24);
+
+          if (upsellEnabled && user.subscriptionLevel !== 'ULTRA') {
              const lastShown = parseInt(localStorage.getItem(`last_upsell_${user.id}`) || '0');
-             const interval = (settings.popupConfigs.upsellPopupIntervalMinutes || 120) * 60 * 1000;
+             const interval = upsellIntervalHours * 60 * 60 * 1000;
              if (now - lastShown > interval) {
                  const isFree = !user.isPremium;
                  const msg = isFree
@@ -184,7 +191,31 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
              }
           }
 
-          // 3. Discount Event Notification
+          // 3. Referral Popup
+          if (gm?.referralPopup?.enabled && !user.redeemedReferralCode) {
+              const lastShown = parseInt(localStorage.getItem(`last_referral_${user.id}`) || '0');
+              const interval = (gm.referralPopup.intervalHours || 72) * 60 * 60 * 1000;
+              if (now - lastShown > interval) {
+                  setShowReferralPopup(true);
+                  localStorage.setItem(`last_referral_${user.id}`, now.toString());
+                  return;
+              }
+          }
+
+          // 4. Custom Info Popup
+          if (gm?.infoPopup?.enabled) {
+              const popupId = `custom_info_popup_${user.id}`;
+              const lastShown = parseInt(localStorage.getItem(popupId) || '0');
+              const interval = (gm.infoPopup.intervalHours || 24) * 60 * 60 * 1000;
+
+              if (now - lastShown > interval && gm.infoPopup.message) {
+                  showAlert(gm.infoPopup.message, "INFO", gm.infoPopup.title || 'Announcement');
+                  localStorage.setItem(popupId, now.toString());
+                  return; // Show one at a time
+              }
+          }
+
+          // Legacy Discount Event Notification (Kept separate from GlobalPopupManager for now, but respects intervals)
           if (settings?.specialDiscountEvent?.enabled) {
               const event = settings.specialDiscountEvent;
               let isEventActive = false;
@@ -198,8 +229,8 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
 
                   if (shouldShow) {
                       const lastShown = parseInt(localStorage.getItem(`last_event_promo_${user.id}_${event.eventName}`) || '0');
-                      // Show every 2 hours if not specified differently, just to ensure they know about the sale
-                      const interval = 2 * 60 * 60 * 1000;
+                      // Show every 12 hours
+                      const interval = 12 * 60 * 60 * 1000;
                       if (now - lastShown > interval) {
                           showAlert(`🎉 ${event.eventName} is LIVE! Get ${event.discountPercent}% OFF on subscriptions right now!`, "SUCCESS", "Special Event");
                           localStorage.setItem(`last_event_promo_${user.id}_${event.eventName}`, now.toString());
@@ -209,7 +240,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
               }
           }
 
-          // 4. Global Free Access & Credit Free Event Popups
+          // 4. Global Free Access & Credit Free Event Popups (Restored)
           if (settings?.isGlobalFreeMode) {
               const lastShown = parseInt(localStorage.getItem(`last_global_free_${user.id}`) || '0');
               const interval = 4 * 60 * 60 * 1000; // Every 4 hours
@@ -230,7 +261,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
               }
           }
 
-          // 5. Admin Custom Popups
+          // 5. Admin Custom Popups (Restored for Copyable features and targeting)
           if (settings?.adminCustomPopups) {
               for (const popup of settings.adminCustomPopups) {
                   if (popup.enabled) {
@@ -243,11 +274,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
                       const interval = 4 * 60 * 60 * 1000; // 4 hours by default for custom popups
 
                       if (now - lastShown > interval) {
-                          let popupMsg = popup.message;
-                          if (popup.copyableText) {
-                              popupMsg += `\n\nCode: ${popup.copyableText}`;
-                          }
-                          showAlert(popupMsg, "INFO", popup.title);
+                          showAlert(popup.message, "INFO", popup.title, popup.copyableText);
                           localStorage.setItem(`${popupId}_${user.id}`, now.toString());
                           return; // Show one at a time
                       }
@@ -263,9 +290,9 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
   }, [user.isPremium, user.subscriptionEndDate, settings?.popupConfigs, settings?.specialDiscountEvent]);
 
   // CUSTOM ALERT STATE
-  const [alertConfig, setAlertConfig] = useState<{isOpen: boolean, type: 'SUCCESS'|'ERROR'|'INFO', title?: string, message: string}>({isOpen: false, type: 'INFO', message: ''});
-  const showAlert = (msg: string, type: 'SUCCESS'|'ERROR'|'INFO' = 'INFO', title?: string) => {
-      setAlertConfig({ isOpen: true, type, title, message: msg });
+  const [alertConfig, setAlertConfig] = useState<{isOpen: boolean, type: 'SUCCESS'|'ERROR'|'INFO', title?: string, message: string, copyableText?: string}>({isOpen: false, type: 'INFO', message: ''});
+  const showAlert = (msg: string, type: 'SUCCESS'|'ERROR'|'INFO' = 'INFO', title?: string, copyableText?: string) => {
+      setAlertConfig({ isOpen: true, type, title, message: msg, copyableText });
   };
 
   // NEW NOTIFICATION LOGIC
@@ -354,12 +381,8 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
   }, [activeTab]);
 
   useEffect(() => {
-      const isNew = (Date.now() - new Date(user.createdAt).getTime()) < 10 * 60 * 1000;
-      if (isNew && !user.redeemedReferralCode && !localStorage.getItem(`referral_shown_${user.id}`)) {
-          setShowReferralPopup(true);
-          localStorage.setItem(`referral_shown_${user.id}`, 'true');
-      }
-  }, [user.id, user.createdAt, user.redeemedReferralCode]);
+      // Logic handled in global popup manager interval now
+  }, []);
 
   const handleSupportEmail = () => {
     const email = settings?.supportEmail || "nadiman0636indo@gmail.com";

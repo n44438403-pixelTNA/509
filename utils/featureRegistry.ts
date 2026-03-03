@@ -681,11 +681,11 @@ export const ALL_FEATURES: Feature[] = [
     },
     {
         id: 'ADMIN_POPUPS',
-        label: 'Popup Config',
+        label: 'Popup Manager',
         group: 'ADVANCED',
         surfaceLevel: 3,
         adminVisible: true,
-        adminTab: 'CONFIG_POPUPS',
+        adminTab: 'POPUP_MANAGER',
         requiredPermission: 'MANAGE_SETTINGS',
         icon: 'Bell',
         color: 'orange'

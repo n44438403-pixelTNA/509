@@ -30,7 +30,7 @@ import { RewardPopup } from './components/RewardPopup';
 import { CreditConfirmationModal } from './components/CreditConfirmationModal';
 import { CustomAlert, CustomConfirm } from './components/CustomDialogs';
 import { MarksheetCard } from './components/MarksheetCard';
-// import { DailyChallengePopup } from './components/DailyChallengePopup';
+import { DailyTrackerPopup } from './components/DailyTrackerPopup';
 import { UpdatePopup } from './components/UpdatePopup'; // NEW
 import { ErrorBoundary } from './components/ErrorBoundary'; // NEW
 import { generateDailyChallengeQuestions } from './utils/challengeGenerator';
@@ -247,7 +247,7 @@ const App: React.FC = () => {
   const [lastTestQuestions, setLastTestQuestions] = useState<MCQItem[] | null>(null); // NEW: For granular analysis
   
   // CUSTOM DIALOG STATE (GLOBAL)
-  const [alertConfig, setAlertConfig] = useState<{isOpen: boolean, message: string}>({isOpen: false, message: ''});
+  const [alertConfig, setAlertConfig] = useState<{isOpen: boolean, message: string, title?: string, copyableText?: string}>({isOpen: false, message: ''});
   const [confirmConfig, setConfirmConfig] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void}>({isOpen: false, title: '', message: '', onConfirm: () => {}});
 
   // CREDIT CONFIRMATION STATE
@@ -918,15 +918,17 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (state.user && state.view === 'STUDENT_DASHBOARD') {
-        const queue: PopupType[] = [];
+        const queue: ('TRACKER' | 'CHALLENGE' | 'WELCOME')[] = [];
 
-        // 1. Daily Tracker (Always check)
-        const lastTracker = localStorage.getItem('nst_last_daily_tracker_date');
-        if (lastTracker !== new Date().toDateString()) {
-            queue.push('TRACKER');
+        // 1. Daily Tracker
+        const gm = state.settings.globalPopupManager;
+        if (gm?.dailyTracker?.enabled) {
+            const lastTracker = parseInt(localStorage.getItem('nst_last_daily_tracker_time') || '0');
+            const interval = (gm.dailyTracker.intervalHours || 24) * 60 * 60 * 1000;
+            if (Date.now() - lastTracker > interval) {
+                queue.push('TRACKER');
+            }
         }
-
-        // 2. Welcome/Promo Popup - DISABLED
 
         if (queue.length > 0) setPopupQueue(queue);
     }
@@ -1891,7 +1893,9 @@ const App: React.FC = () => {
   const handlePopupClose = (type: string) => {
       setPopupQueue(prev => prev.slice(1));
 
-      if (type === 'CHALLENGE') {
+      if (type === 'TRACKER') {
+          localStorage.setItem('nst_last_daily_tracker_time', Date.now().toString());
+      } else if (type === 'CHALLENGE') {
           localStorage.setItem('nst_last_daily_challenge_date', new Date().toDateString());
       } else if (type === 'WELCOME') {
           handleStartApp();
@@ -2324,17 +2328,21 @@ const App: React.FC = () => {
       {activeReward && <RewardPopup reward={activeReward} onClaim={handleClaimReward} onIgnore={handleIgnoreReward} />}
       
       {/* POPUP QUEUE MANAGER */}
-      {/* {popupQueue.length > 0 && !showPremiumModal && !activeWeeklyTest && (
+      {popupQueue.length > 0 && !showPremiumModal && !activeWeeklyTest && state.user && (
           <>
-            {popupQueue[0] === 'CHALLENGE' && (
-                <DailyChallengePopup
-                    onStart={handleStartDailyChallenge}
-                    onClose={() => handlePopupClose('CHALLENGE')}
-                    rewardPercentage={state.settings.dailyChallengeConfig?.rewardPercentage || 90}
+            {popupQueue[0] === 'TRACKER' && (
+                <DailyTrackerPopup
+                    dailySeconds={dailyStudySeconds}
+                    targetSeconds={(() => {
+                        const stored = localStorage.getItem(`nst_goal_${state.user.id}`);
+                        return stored ? parseInt(stored) * 3600 : 3 * 3600;
+                    })()}
+                    onClose={() => handlePopupClose('TRACKER')}
                 />
             )}
+            {/* OTHER POPUPS LIKE CHALLENGE CAN BE ADDED HERE LATER */}
           </>
-      )} */}
+      )}
 
       {lastTestResult && state.user && (
           <MarksheetCard
@@ -2384,6 +2392,8 @@ const App: React.FC = () => {
       <CustomAlert
           isOpen={alertConfig.isOpen}
           message={alertConfig.message}
+          title={alertConfig.title}
+          copyableText={alertConfig.copyableText}
           onClose={() => setAlertConfig({...alertConfig, isOpen: false})}
       />
       <CustomConfirm

@@ -1,17 +1,28 @@
 
-import React from 'react';
-import { X, AlertCircle, CheckCircle, HelpCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, AlertCircle, CheckCircle, HelpCircle, Copy } from 'lucide-react';
 
 interface AlertProps {
   isOpen: boolean;
   type?: 'SUCCESS' | 'ERROR' | 'INFO';
   title?: string;
   message: string;
+  copyableText?: string;
   onClose: () => void;
 }
 
-export const CustomAlert: React.FC<AlertProps> = ({ isOpen, type = 'INFO', title, message, onClose }) => {
+export const CustomAlert: React.FC<AlertProps> = ({ isOpen, type = 'INFO', title, message, copyableText, onClose }) => {
+  const [copied, setCopied] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleCopy = () => {
+    if (copyableText) {
+      navigator.clipboard.writeText(copyableText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
@@ -24,6 +35,21 @@ export const CustomAlert: React.FC<AlertProps> = ({ isOpen, type = 'INFO', title
         </div>
         <h3 className="text-lg font-black text-slate-800 mb-2">{title || (type === 'SUCCESS' ? 'Success' : type === 'ERROR' ? 'Error' : 'Notice')}</h3>
         <p className="text-slate-600 mb-6 text-sm">{message}</p>
+
+        {copyableText && (
+            <div className="mb-6 p-3 bg-slate-50 border border-slate-200 rounded-xl relative overflow-hidden group">
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Coupon / Code</p>
+                <div className="font-mono text-lg font-black text-slate-800 tracking-widest">{copyableText}</div>
+                <button
+                    onClick={handleCopy}
+                    className="absolute inset-0 bg-blue-600 text-white flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity font-bold text-sm"
+                >
+                    {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
+                    {copied ? 'COPIED!' : 'CLICK TO COPY'}
+                </button>
+            </div>
+        )}
+
         <button onClick={onClose} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors">
           Okay
         </button>
