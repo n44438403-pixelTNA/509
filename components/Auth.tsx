@@ -81,9 +81,10 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
   };
 
   const generateUserId = () => {
-      const randomPart = Math.floor(1000 + Math.random() * 9000);
-      const namePart = formData.name.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
-      return `IIC-${namePart}-${randomPart}`;
+      // Generate an 8 to 12 digit numerical ID (using 10 digits as a solid standard)
+      const timestampPart = Date.now().toString().slice(-4); // Last 4 digits of timestamp
+      const randomPart = Math.floor(100000 + Math.random() * 900000); // 6 random digits
+      return `${timestampPart}${randomPart}`; // e.g. 8432104598
   };
 
   const handleCopyId = () => {
@@ -385,7 +386,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                 console.log("No existing user found for this account. Creating new profile...");
                 appUser = {
                     id: firebaseUser.uid,
-                    displayId: 'IIC-' + firebaseUser.uid.substring(0, 5).toUpperCase(),
+                  displayId: generateUserId(),
                     name: firebaseUser.displayName || 'Student',
                     email: input,
                     password: pass,
@@ -612,9 +613,9 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
 
               {view === 'LOGIN' && (
                   <>
-                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Email / Mobile</label><input name="id" type="text" placeholder="Enter Email or Mobile" value={formData.id} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
-                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Password</label><input name="password" type="password" placeholder="Enter Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
-                     <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Login</button>
+                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile / User ID</label><input name="id" type="text" placeholder="Enter Mobile Number or ID" value={formData.id} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl font-bold" /></div>
+                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Password</label><input name="password" type="password" placeholder="Enter Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl font-bold" /></div>
+                     <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4 shadow-lg hover:bg-blue-700">Login</button>
                   </>
               )}
               
