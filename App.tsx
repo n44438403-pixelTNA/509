@@ -743,7 +743,7 @@ const App: React.FC = () => {
 
         let initialView = (user.role === 'ADMIN' || user.role === 'SUB_ADMIN') ? 'ADMIN_DASHBOARD' : 'STUDENT_DASHBOARD';
         
-        if (user.role === 'STUDENT' && (!user.board || !user.classLevel)) {
+        if (user.role === 'STUDENT' && !user.profileCompleted) {
              initialView = 'ONBOARDING';
         }
 
@@ -940,7 +940,7 @@ const App: React.FC = () => {
     localStorage.setItem('nst_has_seen_welcome', 'true');
 
     // Check if onboarding is needed
-    if (user.role === 'STUDENT' && (!user.board || !user.classLevel)) {
+    if (user.role === 'STUDENT' && !user.profileCompleted) {
         setState(prev => ({
           ...prev,
           user,

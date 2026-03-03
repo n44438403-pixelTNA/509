@@ -220,7 +220,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
               }
           }
 
-          if (settings?.isCreditFreeEvent) {
+          if (settings?.creditFreeEvent?.enabled) {
               const lastShown = parseInt(localStorage.getItem(`last_credit_free_${user.id}`) || '0');
               const interval = 4 * 60 * 60 * 1000; // Every 4 hours
               if (now - lastShown > interval) {
@@ -321,7 +321,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
     if (activeTab === 'HOME' || activeTab === 'EXPLORE' || activeTab === 'PROFILE' || (activeTab as any) === 'AI_STUDIO' || activeTab === 'REVISION') {
         setFullScreen(true);
     } else {
-        if (activeTab !== 'VIDEO' && activeTab !== 'PDF' && activeTab !== 'MCQ' && activeTab !== 'AUDIO') {
+        if (activeTab !== 'VIDEO' && activeTab !== 'PDF' && activeTab !== 'MCQ' && (activeTab as any) !== 'AUDIO') {
              setFullScreen(false);
         }
     }
@@ -658,12 +658,12 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
       });
   };
 
-  const handleLessonOption = (type: 'VIDEO' | 'PDF' | 'MCQ' | 'AUDIO') => {
+  const handleLessonOption = (type: 'VIDEO' | 'PDF' | 'MCQ' | 'AUDIO' | any) => {
       if (!selectedLessonForModal) return;
       setShowLessonModal(false);
 
       // Update Tab and State for Player
-      onTabChange(type);
+      onTabChange(type as any);
       setSelectedChapter(selectedLessonForModal);
       setContentViewStep('PLAYER');
       setFullScreen(true);
@@ -744,7 +744,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
           { id: 'ANALYTICS', label: 'Analytics', icon: BarChart3, color: 'blue', action: () => { onTabChange('ANALYTICS'); setShowSidebar(false); } },
           { id: 'MARKSHEET', label: 'Marksheet', icon: FileText, color: 'green', action: () => { setShowMonthlyReport(true); setShowSidebar(false); } },
           { id: 'HISTORY', label: 'History', icon: History, color: 'slate', action: () => { onTabChange('HISTORY'); setShowSidebar(false); } },
-          { id: 'PLAN', label: 'My Plan', icon: CreditCard, color: 'purple', action: () => { onTabChange('SUB_HISTORY'); setShowSidebar(false); } },
+        { id: 'PLAN', label: 'My Plan', icon: CreditCard, color: 'purple', action: () => { onTabChange('SUB_HISTORY' as any); setShowSidebar(false); } },
           ...(isGameEnabled ? [{ id: 'GAME', label: 'Play Game', icon: Gamepad2, color: 'orange', action: () => { onTabChange('GAME'); setShowSidebar(false); }, featureId: 'GAMES' }] : []),
           { id: 'REDEEM', label: 'Redeem', icon: Gift, color: 'pink', action: () => { onTabChange('REDEEM'); setShowSidebar(false); } },
           { id: 'PRIZES', label: 'Prizes', icon: Trophy, color: 'yellow', action: () => { onTabChange('PRIZES'); setShowSidebar(false); } },
@@ -1018,7 +1018,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
 
       // 4. LEGACY TABS (Mapped to new structure or kept as sub-views)
       if (activeTab === 'CUSTOM_PAGE') return <CustomBloggerPage onBack={() => onTabChange('HOME')} />;
-      if (activeTab === 'DEEP_ANALYSIS') return <AiDeepAnalysis user={user} settings={settings} onUpdateUser={handleUserUpdate} onBack={() => onTabChange('HOME')} />;
+      if ((activeTab as string) === 'DEEP_ANALYSIS') return <AiDeepAnalysis user={user} settings={settings} onUpdateUser={handleUserUpdate} onBack={() => onTabChange('HOME')} />;
       if (activeTab === 'UPDATES') return <UniversalInfoPage onBack={() => onTabChange('HOME')} />;
       if ((activeTab as string) === 'ANALYTICS') return <AnalyticsPage user={user} onBack={() => onTabChange('HOME')} settings={settings} onNavigateToChapter={onNavigateToChapter} />;
       if ((activeTab as string) === 'SUB_HISTORY') return <SubscriptionHistory user={user} onBack={() => onTabChange('HOME')} />;
@@ -1315,7 +1315,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
                             View Monthly Report
                         </Button>
                         <Button
-                            onClick={() => onTabChange('SUB_HISTORY')}
+                            onClick={() => onTabChange('SUB_HISTORY' as any)}
                             variant="secondary"
                             fullWidth
                             icon={<History size={18} />}
@@ -1475,8 +1475,8 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
       }
 
       // Handle Drill-Down Views (Video, PDF, MCQ, AUDIO)
-      if (activeTab === 'VIDEO' || activeTab === 'PDF' || activeTab === 'MCQ' || activeTab === 'AUDIO') {
-          return renderContentSection(activeTab);
+      if (activeTab === 'VIDEO' || activeTab === 'PDF' || activeTab === 'MCQ' || (activeTab as any) === 'AUDIO') {
+          return renderContentSection(activeTab as any);
       }
 
       return null;
@@ -1922,7 +1922,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
                           if (type === 'PDF' || type === 'VIDEO' || type === 'MCQ') {
                               setLoadingChapters(true);
                               const lang = user.board === 'BSEB' ? 'Hindi' : 'English';
-                              fetchChapters(user.board || 'CBSE', user.classLevel || '10', user.stream || 'Science', null, lang).then(allChapters => {
+                                  fetchChapters(user.board as any || 'CBSE', user.classLevel as any || '10', user.stream as any || 'Science', null as any, lang).then(allChapters => {
                                   const ch = allChapters.find(c => c.id === chapterId);
                                   if (ch) {
                                       // Switch Tab
