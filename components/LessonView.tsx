@@ -1300,49 +1300,38 @@ export const LessonView: React.FC<Props> = ({
                                            </div>
                                        </div>
 
-                                       {/* Detailed Solutions */}
-                                       <div className="space-y-6">
-                                           <h3 className="font-black text-slate-800 text-lg">Detailed Solutions</h3>
-                                           {displayData.map((q, idx) => {
-                                               const userAnswer = mcqState[idx];
-                                               const isAnswered = userAnswer !== undefined && userAnswer !== null;
-                                               const isCorrect = isAnswered && userAnswer === q.correctAnswer;
-
-                                               return (
-                                                   <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                                                       <div className="flex gap-3 mb-4">
-                                                           <span className={`w-6 h-6 flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold mt-0.5 ${isCorrect ? 'bg-green-100 text-green-700' : isAnswered ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-500'}`}>{idx + 1}</span>
-                                                           <div className="text-sm font-bold text-slate-800 leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMathInHtml(q.question) }} />
-                                                       </div>
-                                                       <div className="ml-9 space-y-2">
-                                                           {q.options.map((opt, oIdx) => {
-                                                               const isSelected = userAnswer === oIdx;
-                                                               const isAnswer = q.correctAnswer === oIdx;
-                                                               let cls = "border-slate-100 bg-slate-50 text-slate-600";
-                                                               if (isAnswer) cls = "border-green-300 bg-green-50 text-green-800 font-bold";
-                                                               else if (isSelected) cls = "border-red-300 bg-red-50 text-red-800 font-bold";
-
-                                                               return (
-                                                                   <div key={oIdx} className={`p-3 rounded-xl border flex items-center gap-3 text-xs transition-colors ${cls}`}>
-                                                                       <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] border ${isAnswer ? 'border-green-400 bg-green-100 text-green-700' : isSelected ? 'border-red-400 bg-red-100 text-red-700' : 'border-slate-300 bg-white text-slate-400'}`}>
-                                                                           {String.fromCharCode(65 + oIdx)}
-                                                                       </div>
-                                                                       <div className="flex-1" dangerouslySetInnerHTML={{ __html: renderMathInHtml(opt) }} />
-                                                                   </div>
-                                                               );
-                                                           })}
-                                                       </div>
-                                                       {q.explanation && (
-                                                           <div className="ml-9 mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                                                               <div className="text-xs text-slate-700 leading-relaxed font-medium">
-                                                                   <span className="font-bold text-blue-800 block mb-1">Explanation:</span>
-                                                                   <span dangerouslySetInnerHTML={{ __html: renderMathInHtml(q.explanation) }} />
-                                                               </div>
-                                                           </div>
-                                                       )}
-                                                   </div>
-                                               );
-                                           })}
+                                       {/* Detailed Solutions Hidden by default, redirecting to marksheet instead */}
+                                       <div className="mt-8">
+                                           <button
+                                               onClick={() => {
+                                                   if (onShowMarksheet) {
+                                                       // Construct temporary result object to pass to marksheet
+                                                       const result = {
+                                                           id: 'temp',
+                                                           userId: user?.id,
+                                                           chapterId: chapter.id,
+                                                           chapterTitle: chapter.title,
+                                                           subjectId: subject.id,
+                                                           subjectName: subject.name,
+                                                           score: Object.keys(mcqState).reduce((acc, k) => acc + (mcqState[parseInt(k)] === displayData[parseInt(k)].correctAnswer ? 1 : 0), 0),
+                                                           totalQuestions: displayData.length,
+                                                           totalTimeSeconds: 0,
+                                                           omrData: displayData.map((q, i) => ({
+                                                               qIndex: i,
+                                                               selected: mcqState[i] !== undefined && mcqState[i] !== null ? mcqState[i]! : -1,
+                                                               correct: q.correctAnswer
+                                                           })),
+                                                           date: new Date().toISOString()
+                                                       };
+                                                       onShowMarksheet(result);
+                                                   } else {
+                                                       setAlertConfig({isOpen: true, title: "Unavailable", message: "Explanation page is not available here."});
+                                                   }
+                                               }}
+                                               className="w-full bg-blue-100 text-blue-700 font-bold py-4 rounded-2xl flex justify-center items-center gap-2 hover:bg-blue-200 transition-colors"
+                                           >
+                                               <BookOpen size={20} /> View Full Explanations Page
+                                           </button>
                                        </div>
                                    </div>
                                );
