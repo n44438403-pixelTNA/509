@@ -14,7 +14,7 @@ interface Props {
   logActivity: (action: string, details: string, user?: User) => void;
 }
 
-type AuthView = 'LOGIN' | 'SIGNUP' | 'ADMIN' | 'RECOVERY' | 'SUCCESS_ID';
+type AuthView = 'HOME' | 'LOGIN' | 'SIGNUP' | 'ADMIN' | 'RECOVERY' | 'SUCCESS_ID';
 
 const BLOCKED_DOMAINS = [
     'tempmail.com', 'throwawaymail.com', 'mailinator.com', 'yopmail.com', 
@@ -23,7 +23,7 @@ const BLOCKED_DOMAINS = [
 ];
 
 export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
-  const [view, setView] = useState<AuthView>('LOGIN');
+  const [view, setView] = useState<AuthView>('HOME');
   const [generatedId, setGeneratedId] = useState<string>('');
   const [formData, setFormData] = useState({
     id: '',
@@ -546,22 +546,24 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
           <p className="text-slate-400 font-bold tracking-[0.2em] text-[10px] uppercase mt-2">The Future of Learning</p>
         </div>
 
-        <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 relative z-10">
-          {view === 'LOGIN' && <LogIn className="text-blue-600" />}
-          {view === 'SIGNUP' && <UserPlus className="text-blue-600" />}
-          {view === 'RECOVERY' && <KeyRound className="text-orange-500" />}
-          
-          <span className="flex-1">
-            {view === 'LOGIN' && 'Student Login'}
-            {view === 'SIGNUP' && 'Create Account'}
-            {view === 'RECOVERY' && 'Request Login'}
-            {view === 'ADMIN' && (showAdminVerify ? 'Admin Verification' : 'Admin Login')}
-          </span>
+        {view !== 'HOME' && (
+            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 relative z-10">
+              {view === 'LOGIN' && <LogIn className="text-blue-600" />}
+              {view === 'SIGNUP' && <UserPlus className="text-blue-600" />}
+              {view === 'RECOVERY' && <KeyRound className="text-orange-500" />}
 
-          {view === 'LOGIN' && <SpeakButton text="Welcome! Enter your ID and password to login. If you are new, click Register Here below." className="text-blue-600 hover:bg-blue-50" />}
-          {view === 'SIGNUP' && <SpeakButton text="Create your new account. Fill in your name, mobile, and choose a password." className="text-blue-600 hover:bg-blue-50" />}
-          {view === 'RECOVERY' && <SpeakButton text="Forgot password? Enter your ID or Mobile to request admin approval." className="text-orange-500 hover:bg-orange-50" />}
-        </h2>
+              <span className="flex-1">
+                {view === 'LOGIN' && 'Student Login'}
+                {view === 'SIGNUP' && 'Create Account'}
+                {view === 'RECOVERY' && 'Request Login'}
+                {view === 'ADMIN' && (showAdminVerify ? 'Admin Verification' : 'Admin Login')}
+              </span>
+
+              {view === 'LOGIN' && <SpeakButton text="Welcome! Enter your ID and password to login." className="text-blue-600 hover:bg-blue-50" />}
+              {view === 'SIGNUP' && <SpeakButton text="Create your new account. Fill in your name, mobile, and choose a password." className="text-blue-600 hover:bg-blue-50" />}
+              {view === 'RECOVERY' && <SpeakButton text="Forgot password? Enter your ID or Mobile to request admin approval." className="text-orange-500 hover:bg-orange-50" />}
+            </h2>
+        )}
 
         {error && (
           <div className="bg-red-50 text-red-600 text-sm font-bold p-4 rounded-xl mb-6 border border-red-100 flex items-start gap-2 animate-in slide-in-from-top-2">
@@ -569,7 +571,41 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
+        {view === 'HOME' && (
+            <div className="space-y-4 relative z-10 animate-in fade-in">
+                 <button type="button" onClick={handleGoogleAuth} className="w-full bg-white border border-slate-200 text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 hover:bg-slate-50 transition-colors shadow-sm">
+                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                     Continue with Google
+                 </button>
+
+                 <div className="flex items-center gap-4 my-6">
+                     <div className="flex-1 h-px bg-slate-200"></div>
+                 </div>
+
+                 <button type="button" onClick={() => setView('SIGNUP')} className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-4 rounded-full transition-colors">
+                     Sign up
+                 </button>
+
+                 <div className="flex items-center gap-4 my-6">
+                     <div className="flex-1 h-px bg-slate-200"></div>
+                     <span className="text-xs font-bold text-slate-400 uppercase">OR</span>
+                     <div className="flex-1 h-px bg-slate-200"></div>
+                 </div>
+
+                 <button type="button" onClick={() => setView('LOGIN')} className="w-full bg-transparent border border-slate-300 text-slate-800 font-bold py-4 rounded-full hover:bg-slate-50 transition-colors">
+                     Log in
+                 </button>
+
+                 <div className="mt-8 text-center">
+                    <button onClick={() => setView('ADMIN')} className="text-slate-400 hover:text-slate-600 text-xs font-bold transition-colors">
+                        Admin Login
+                    </button>
+                 </div>
+            </div>
+        )}
+
+        {view !== 'HOME' && (
+            <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
               {view === 'RECOVERY' && (
                   <div className="animate-in fade-in">
                     <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-6 text-center">
@@ -615,15 +651,6 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
 
               {view === 'SIGNUP' && (
                   <>
-                    <button type="button" onClick={handleGoogleAuth} className="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3.5 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-50 mb-4">
-                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                         Continue with Google
-                     </button>
-                     <div className="flex items-center gap-4 my-4">
-                         <div className="flex-1 h-px bg-slate-200"></div>
-                         <span className="text-xs font-bold text-slate-400">OR</span>
-                         <div className="flex-1 h-px bg-slate-200"></div>
-                     </div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Full Name</label><input name="name" type="text" placeholder="Real Name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Password (8-20 Chars)</label><input name="password" type="password" placeholder="Create Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={20} /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Real Email Address</label><input name="email" type="email" placeholder="your.email@gmail.com" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
@@ -634,15 +661,6 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
 
               {view === 'LOGIN' && (
                   <>
-                     <button type="button" onClick={handleGoogleAuth} className="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3.5 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-50 mb-4">
-                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                         Continue with Google
-                     </button>
-                     <div className="flex items-center gap-4 my-4">
-                         <div className="flex-1 h-px bg-slate-200"></div>
-                         <span className="text-xs font-bold text-slate-400">OR</span>
-                         <div className="flex-1 h-px bg-slate-200"></div>
-                     </div>
                      <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Email / Mobile</label><input name="id" type="text" placeholder="Enter Email or Mobile" value={formData.id} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
                      <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Password</label><input name="password" type="password" placeholder="Enter Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
                      <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Login</button>
@@ -656,21 +674,19 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                     <button type="submit" className="w-full bg-purple-600 text-white font-bold py-3.5 rounded-xl mt-4 flex items-center justify-center gap-2">{showAdminVerify ? <><Lock size={18} /> Access Dashboard</> : 'Verify Email'}</button>
                   </>
               )}
-        </form>
+            </form>
+        )}
 
         {view === 'LOGIN' && (
             <div className="mt-6 text-center">
                 <button onClick={() => setView('RECOVERY')} className="text-xs text-orange-500 font-bold hover:underline bg-orange-50 px-4 py-2 rounded-full border border-orange-100">
                     Request Login without Password
                 </button>
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                    <p className="text-slate-500 text-sm">New Student? <button onClick={() => setView('SIGNUP')} className="text-blue-600 font-bold">Register Here</button></p>
-                </div>
             </div>
         )}
-        {(view === 'SIGNUP' || view === 'ADMIN' || view === 'RECOVERY') && (
+        {(view === 'SIGNUP' || view === 'ADMIN' || view === 'RECOVERY' || view === 'LOGIN') && (
             <div className="mt-4 text-center">
-                <button onClick={() => setView('LOGIN')} className="text-slate-500 font-bold text-sm">Back to Login</button>
+                <button onClick={() => setView('HOME')} className="text-slate-500 font-bold text-sm">Go Back</button>
             </div>
         )}
       </div>
