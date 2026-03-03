@@ -298,8 +298,6 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
   const [pendingApp, setPendingApp] = useState<{app: any, cost: number} | null>(null);
   const [contentViewStep, setContentViewStep] = useState<'SUBJECTS' | 'CHAPTERS' | 'PLAYER'>('SUBJECTS');
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-
-  const [showGuestPopup, setShowGuestPopup] = useState(user.role === 'GUEST');
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loadingChapters, setLoadingChapters] = useState(false);
@@ -1801,53 +1799,6 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
 
         {/* MINI PLAYER */}
         <MiniPlayer track={currentAudioTrack} onClose={() => setCurrentAudioTrack(null)} />
-
-        {/* GUEST REGISTRATION POPUP */}
-        {showGuestPopup && (
-            <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in">
-                <div className="bg-white p-6 rounded-3xl w-full max-w-sm shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-10 -mt-10 z-0"></div>
-                    <div className="relative z-10 text-center">
-                        <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <UserIcon size={32} />
-                        </div>
-                        <h3 className="text-xl font-black text-slate-800 mb-2">Register Your Account</h3>
-                        <p className="text-sm text-slate-500 mb-6 font-medium">
-                            Secure your account to access it on any device. Your data will be safe after registration.
-                        </p>
-
-                        <form onSubmit={async (e) => {
-                            e.preventDefault();
-                            const formData = new FormData(e.currentTarget as HTMLFormElement);
-                            const mobile = formData.get('mobile') as string;
-                            if (mobile.length !== 10) {
-                                showAlert("Please enter a valid 10-digit mobile number", "ERROR");
-                                return;
-                            }
-
-                            const generatedPassword = Math.random().toString(36).slice(-8);
-                            const updatedUser = {
-                                ...user,
-                                role: 'STUDENT',
-                                mobile: mobile,
-                                password: generatedPassword,
-                            };
-
-                            await handleUserUpdate(updatedUser);
-                            setShowGuestPopup(false);
-
-                            showAlert(`Registration Successful!\n\nYour Temporary Password is: ${generatedPassword}\n\nYou can change this later in your profile.`, "SUCCESS");
-                        }}>
-                            <div className="space-y-4 text-left mb-6">
-                                <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Mobile Number</label>
-                                <input name="mobile" type="tel" placeholder="Enter 10-digit mobile" maxLength={10} required className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold" />
-                            </div>
-                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-700 transition-colors">Done</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        )}
 
         {/* FLOATING ACTION MENU */}
         {(activeTab === 'HOME' || activeTab === 'REVISION' || activeTab === 'AI_HUB' || activeTab === 'PROFILE' || activeTab === 'HISTORY' || (activeTab as string) === 'ANALYTICS') && (

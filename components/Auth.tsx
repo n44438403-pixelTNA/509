@@ -248,39 +248,6 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
       }
   };
 
-  const handleGuestAccess = async () => {
-      try {
-          setStatusCheckLoading(true);
-          const newId = generateUserId();
-          const guestUser: User = {
-              id: `guest_${newId}`,
-              displayId: newId,
-              name: 'Guest User',
-              email: `guest_${newId}@temp.com`,
-              password: '',
-              mobile: '',
-              role: 'GUEST',
-              createdAt: new Date().toISOString(),
-              credits: 0,
-              streak: 0,
-              lastLoginDate: new Date().toISOString(),
-              board: '',
-              classLevel: '',
-              provider: 'guest',
-              profileCompleted: false,
-              progress: {},
-              redeemedCodes: [],
-              subscriptionTier: 'FREE',
-              isPremium: false
-          };
-          onLogin(guestUser);
-      } catch (e: any) {
-          setError("Guest Access Failed: " + e.message);
-      } finally {
-          setStatusCheckLoading(false);
-      }
-  };
-
   const handleGoogleAuth = async () => {
       try {
           const provider = new GoogleAuthProvider();
@@ -613,14 +580,6 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                  <button type="button" onClick={handleGoogleAuth} className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm border border-slate-300">
                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                      Continue with Google
-                 </button>
-
-                 <div className="flex items-center gap-4 my-3 opacity-0">
-                     <div className="flex-1 h-px bg-slate-200"></div>
-                 </div>
-
-                 <button type="button" onClick={handleGuestAccess} className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm border border-slate-300">
-                     Guest Access
                  </button>
 
                  <div className="flex items-center gap-4 my-3 opacity-0">

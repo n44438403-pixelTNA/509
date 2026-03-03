@@ -67,12 +67,6 @@ export const McqView: React.FC<Props> = ({
   }, [board, classLevel, stream, subject, chapter]);
 
   const handleStart = async (mode: 'PRACTICE' | 'TEST') => {
-      // GUEST RESTRICTION
-      if (user.role === 'GUEST') {
-          setAlertConfig({isOpen: true, title: "Guest Access Restricted", message: "Guests cannot access Practice/Test mode.\nPlease Login or Sign Up to continue."});
-          return;
-      }
-
       // DAILY LIMIT CHECK
       if (user.role !== 'ADMIN') {
           const todayStr = new Date().toDateString();

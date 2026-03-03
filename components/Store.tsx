@@ -414,8 +414,8 @@ export const Store: React.FC<Props> = ({ user, settings }) => {
                       }
                   }
 
-                  // 2. Renewal Bonus (5% Extra for Existing Premium or History)
-                  if (user.isPremium || (user.subscriptionHistory && user.subscriptionHistory.length > 0)) {
+                  // 2. Renewal Bonus (5% Extra for active Premium users)
+                  if (user.isPremium) {
                       discountPercentVal += 5;
                   }
 
@@ -433,7 +433,7 @@ export const Store: React.FC<Props> = ({ user, settings }) => {
                   const isYearly = plan.name.includes('Yearly');
 
                   // Check if renewal bonus is active for this user (Used for UI Badge only)
-                  const hasRenewalBonus = user.isPremium || (user.subscriptionHistory && user.subscriptionHistory.length > 0);
+                  const hasRenewalBonus = user.isPremium;
 
                   return (
                       <button
@@ -495,7 +495,7 @@ export const Store: React.FC<Props> = ({ user, settings }) => {
                              discountPercentVal += (event?.discountPercent || 0);
                          }
                      }
-                     if (user.isPremium || (user.subscriptionHistory && user.subscriptionHistory.length > 0)) {
+                     if (user.isPremium) {
                          discountPercentVal += 5;
                      }
                      if (user.storeDiscount) {
