@@ -126,6 +126,8 @@ export interface User {
   board?: string;
   classLevel?: string;
   stream?: string; // Only for 11/12
+  provider?: 'google' | 'manual';
+  profileCompleted?: boolean;
   
   // Chat & Premium Features
   isPremium?: boolean;
@@ -509,6 +511,9 @@ export interface SystemSettings {
     intervalMinutes?: number;
     showNearExpiryHours?: number;
   };
+  creditFreeEvent?: {
+    enabled: boolean;
+  };
   dailyChallengeConfig?: {
     mode: 'AUTO' | 'MANUAL';
     rewardPercentage: number;
@@ -612,6 +617,7 @@ export interface SystemSettings {
 }
 
 export interface RevisionConfig {
+    trackWrongAnswers?: boolean;
     thresholds: {
         strong: number; // e.g., 80
         average: number; // e.g., 50 (implied weak < 50)

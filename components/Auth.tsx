@@ -126,7 +126,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
             streak: 0,
             lastLoginDate: new Date().toISOString(),
             redeemedCodes: [],
-            board: "",
+            board: "", profileCompleted: false, provider: "manual",
             classLevel: "",
             stream: "",
             progress: {},
@@ -286,6 +286,8 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                   lastLoginDate: new Date().toISOString(),
                   board: '', // Left empty to trigger onboarding
                   classLevel: '', // Left empty to trigger onboarding
+                  provider: 'google',
+                  profileCompleted: false,
                   progress: {},
                   redeemedCodes: [],
                   subscriptionTier: 'FREE',
@@ -384,8 +386,10 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                     credits: 0,
                     streak: 0,
                     lastLoginDate: new Date().toISOString(),
-                    board: 'CBSE',
-                    classLevel: '10',
+                    board: '',
+                    classLevel: '',
+                    provider: 'manual',
+                    profileCompleted: false,
                     progress: {},
                     redeemedCodes: []
                 } as User;
@@ -611,11 +615,20 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
 
               {view === 'SIGNUP' && (
                   <>
+                    <button type="button" onClick={handleGoogleAuth} className="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3.5 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-50 mb-4">
+                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                         Continue with Google
+                     </button>
+                     <div className="flex items-center gap-4 my-4">
+                         <div className="flex-1 h-px bg-slate-200"></div>
+                         <span className="text-xs font-bold text-slate-400">OR</span>
+                         <div className="flex-1 h-px bg-slate-200"></div>
+                     </div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Full Name</label><input name="name" type="text" placeholder="Real Name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Password (8-20 Chars)</label><input name="password" type="password" placeholder="Create Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={20} /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Real Email Address</label><input name="email" type="email" placeholder="your.email@gmail.com" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile (10 Digits)</label><input name="mobile" type="tel" placeholder="Mobile Number" value={formData.mobile} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={10} /></div>
-                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Generate ID & Sign Up</button>
+                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Create Account</button>
                   </>
               )}
 

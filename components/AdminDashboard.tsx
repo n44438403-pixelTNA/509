@@ -9987,6 +9987,10 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
           </div>
       )}
 
+      {activeTab === 'NSTA_CONTROL' && (
+          <NstaFeatureManager settings={localSettings} onUpdateSettings={setLocalSettings} onBack={() => setActiveTab('DASHBOARD')} />
+      )}
+
             {/* --- VISIBILITY CONTROL (Legacy Restored) --- */}
       {activeTab === 'CONFIG_VISIBILITY' && (
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 animate-in slide-in-from-right">

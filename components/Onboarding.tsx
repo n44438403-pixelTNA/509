@@ -11,12 +11,17 @@ interface Props {
 
 export const Onboarding: React.FC<Props> = ({ user, onComplete, onLogout }) => {
   const [step, setStep] = useState(1);
+  const [name, setName] = useState(user.name || '');
   const [board, setBoard] = useState<Board | ''>('');
   const [classLevel, setClassLevel] = useState<ClassLevel | ''>('');
   const [stream, setStream] = useState<Stream | ''>('');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleNext = () => {
+      if (step === 1 && !name.trim()) {
+          alert('Please enter your name.');
+          return;
+      }
       if (step === 1 && !board) {
           alert('Please select a board.');
           return;
@@ -42,9 +47,11 @@ export const Onboarding: React.FC<Props> = ({ user, onComplete, onLogout }) => {
       try {
           const updatedUser: User = {
               ...user,
+              name: name.trim(),
               board: board as Board,
               classLevel: classLevel as ClassLevel,
-              stream: stream ? (stream as Stream) : undefined
+              stream: stream ? (stream as Stream) : undefined,
+              profileCompleted: true
           };
 
           await saveUserToLive(updatedUser);
@@ -107,7 +114,17 @@ export const Onboarding: React.FC<Props> = ({ user, onComplete, onLogout }) => {
           <div className="p-8 pt-6 flex-1 min-h-[300px]">
               {step === 1 && (
                   <div className="animate-in slide-in-from-right fade-in duration-300">
-                      <div className="flex items-center gap-3 mb-6">
+                      <div className="mb-6">
+                          <label className="text-sm font-bold text-slate-700 block mb-2">Full Name</label>
+                          <input
+                              type="text"
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
+                              placeholder="Enter your full name"
+                              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                      </div>
+                      <div className="flex items-center gap-3 mb-6 mt-6">
                           <Target className="text-blue-500" size={24} />
                           <h2 className="text-lg font-bold text-slate-800">Select Your Board</h2>
                       </div>
@@ -201,7 +218,7 @@ export const Onboarding: React.FC<Props> = ({ user, onComplete, onLogout }) => {
                   {isSaving ? (
                       <><Loader2 className="animate-spin" size={20} /> Saving...</>
                   ) : (
-                      <>{step === 2 ? 'Finish & Start Learning' : 'Continue'}</>
+                      <>{step === 2 ? 'Continue to Dashboard' : 'Continue'}</>
                   )}
               </button>
           </div>
