@@ -2687,7 +2687,15 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                       )}
                   </div>
 
-                  <div className="flex flex-col w-full max-w-xs gap-2">
+                  <div className="flex w-full md:w-auto gap-2 items-center flex-wrap">
+                      <button
+                          onClick={() => onToggleDarkMode && onToggleDarkMode(!isDarkMode)}
+                          className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] uppercase tracking-widest font-black transition-all shadow-sm ${isDarkMode ? 'bg-slate-800 text-yellow-400 border border-slate-700' : 'bg-white text-slate-600 border border-slate-200'}`}
+                      >
+                          {isDarkMode ? <Sparkles size={14} /> : <Zap size={14} />}
+                          {isDarkMode ? 'Dark' : 'Light'}
+                      </button>
+
                       <button 
                           onClick={() => {
                               if (confirm("⚠️ FORCE UPDATE ALL APPS?\n\nThis will trigger a reload on all student devices to apply latest changes immediately.")) {
@@ -2701,25 +2709,17 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                                   alert("✅ Update Command Sent!");
                               }
                           }}
-                          className="w-full bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow hover:bg-red-700 flex items-center justify-center gap-2 animate-pulse"
+                          className="flex-1 md:flex-none bg-red-100 text-red-600 border border-red-200 px-4 py-2.5 rounded-xl text-[10px] uppercase tracking-widest font-black hover:bg-red-200 flex items-center justify-center gap-2 transition-colors"
                       >
-                          <RefreshCw size={16} /> Force Update
-                      </button>
-
-                      <button
-                          onClick={() => onToggleDarkMode && onToggleDarkMode(!isDarkMode)}
-                          className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all ${isDarkMode ? 'bg-slate-800 text-yellow-400 border border-slate-700' : 'bg-white text-slate-600 border border-slate-200'}`}
-                      >
-                          {isDarkMode ? <Sparkles size={16} /> : <Zap size={16} />}
-                          {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+                          <RefreshCw size={14} /> Force Update
                       </button>
 
                       <button
                           onClick={() => handleSaveSettings()}
                           disabled={isSettingsSaving}
-                          className={`w-full bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg hover:bg-green-700 flex items-center justify-center gap-2 ${isSettingsSaving ? 'opacity-70 cursor-wait' : ''}`}
+                          className={`flex-1 md:flex-none bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest font-black shadow-lg hover:bg-indigo-700 flex items-center justify-center gap-2 transition-colors ${isSettingsSaving ? 'opacity-70 cursor-wait' : ''}`}
                       >
-                          {isSettingsSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                          {isSettingsSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                           {isSettingsSaving ? 'Saving...' : 'Save Settings'}
                       </button>
                   </div>
@@ -3165,6 +3165,126 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                             </div>
                         </div>
 
+                  </div>
+              </div>
+
+              {/* CUSTOM ADMIN POPUPS (New Requirement) */}
+              <div className="mt-8 border-t border-slate-200 pt-8">
+                  <div className="flex justify-between items-center mb-6">
+                      <h4 className="font-black text-slate-800 text-lg flex items-center gap-2">
+                          <MessageSquare size={20} className="text-blue-600" /> Custom Admin Popups
+                      </h4>
+                      <button
+                          onClick={() => {
+                              const newPopup = {
+                                  enabled: false,
+                                  title: 'New Announcement',
+                                  message: 'Type your message here...',
+                                  type: 'INFO' as const,
+                                  showTo: 'ALL' as const
+                              };
+                              setLocalSettings({
+                                  ...localSettings,
+                                  adminCustomPopups: [...(localSettings.adminCustomPopups || []), newPopup]
+                              });
+                          }}
+                          className="bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2"
+                      >
+                          <Plus size={14} /> Create Popup
+                      </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(localSettings.adminCustomPopups || []).map((popup, idx) => (
+                          <div key={idx} className={`p-4 rounded-xl border-2 transition-all ${popup.enabled ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-slate-50'}`}>
+                              <div className="flex justify-between items-start mb-4">
+                                  <div className="flex items-center gap-3">
+                                      <input
+                                          type="checkbox"
+                                          checked={popup.enabled}
+                                          onChange={(e) => {
+                                              const newPopups = [...localSettings.adminCustomPopups!];
+                                              newPopups[idx].enabled = e.target.checked;
+                                              setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                          }}
+                                          className="w-5 h-5 accent-blue-600"
+                                      />
+                                      <select
+                                          value={popup.type}
+                                          onChange={(e) => {
+                                              const newPopups = [...localSettings.adminCustomPopups!];
+                                              newPopups[idx].type = e.target.value as any;
+                                              setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                          }}
+                                          className="bg-white border rounded p-1 text-xs font-bold"
+                                      >
+                                          <option value="INFO">Info</option>
+                                          <option value="DISCOUNT">Discount Event</option>
+                                          <option value="FREE_CREDIT">Free Credits</option>
+                                          <option value="FREE_ACCESS">Free Access</option>
+                                          <option value="SUBSCRIPTION">Subscription Promos</option>
+                                      </select>
+                                  </div>
+                                  <button onClick={() => {
+                                      const newPopups = localSettings.adminCustomPopups!.filter((_, i) => i !== idx);
+                                      setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                  }} className="text-red-400 hover:text-red-600">
+                                      <Trash2 size={16} />
+                                  </button>
+                              </div>
+
+                              <div className="space-y-3">
+                                  <input
+                                      type="text"
+                                      value={popup.title}
+                                      onChange={(e) => {
+                                          const newPopups = [...localSettings.adminCustomPopups!];
+                                          newPopups[idx].title = e.target.value;
+                                          setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                      }}
+                                      className="w-full p-2 border rounded font-bold text-sm"
+                                      placeholder="Popup Title"
+                                  />
+                                  <textarea
+                                      value={popup.message}
+                                      onChange={(e) => {
+                                          const newPopups = [...localSettings.adminCustomPopups!];
+                                          newPopups[idx].message = e.target.value;
+                                          setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                      }}
+                                      className="w-full p-2 border rounded text-xs min-h-[60px]"
+                                      placeholder="Popup Message..."
+                                  />
+
+                                  <div className="grid grid-cols-2 gap-2">
+                                      <input
+                                          type="text"
+                                          value={popup.copyableText || ''}
+                                          onChange={(e) => {
+                                              const newPopups = [...localSettings.adminCustomPopups!];
+                                              newPopups[idx].copyableText = e.target.value;
+                                              setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                          }}
+                                          className="w-full p-2 border rounded text-xs bg-slate-100 font-mono"
+                                          placeholder="Copyable Code (Optional)"
+                                      />
+                                      <select
+                                          value={popup.showTo}
+                                          onChange={(e) => {
+                                              const newPopups = [...localSettings.adminCustomPopups!];
+                                              newPopups[idx].showTo = e.target.value as any;
+                                              setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                          }}
+                                          className="w-full p-2 border rounded text-xs font-bold"
+                                      >
+                                          <option value="ALL">Show to All</option>
+                                          <option value="FREE">Free Users Only</option>
+                                          <option value="PREMIUM">Premium Users Only</option>
+                                      </select>
+                                  </div>
+                              </div>
+                          </div>
+                      ))}
                   </div>
               </div>
           </div>

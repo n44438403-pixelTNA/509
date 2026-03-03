@@ -496,6 +496,19 @@ export interface SystemSettings {
     showToPremiumUsers: boolean;
     showNearExpiryHours: number; // 24
   };
+  adminCustomPopups?: {
+    enabled: boolean;
+    title: string;
+    message: string;
+    type: 'DISCOUNT' | 'FREE_CREDIT' | 'FREE_ACCESS' | 'SUBSCRIPTION' | 'EXPIRY' | 'INFO';
+    actionText?: string;
+    actionUrl?: string;
+    copyableText?: string;
+    subject?: string;
+    class?: string;
+    lesson?: string;
+    showTo: 'ALL' | 'FREE' | 'PREMIUM';
+  }[];
   popupConfigs?: {
       isExpiryWarningEnabled: boolean;
       expiryWarningHours: number;
