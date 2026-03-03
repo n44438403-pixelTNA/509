@@ -2957,63 +2957,98 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                   </div>
               </div>
 
-              {/* SUBSCRIPTION PLAN EDITOR (Moved from PRICING_MGMT) */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4">
-                  <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Crown size={18} /> Subscription Plans</h4>
+              {/* NEW SUBSCRIPTION PLAN EDITOR (Full Control) */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 overflow-hidden">
+                  <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-bold text-slate-800 flex items-center gap-2"><Crown size={18} className="text-yellow-500" /> Subscription Plans (Store View)</h4>
+                      <button
+                          onClick={() => {
+                              const newPlan = {
+                                  id: `plan-${Date.now()}`,
+                                  name: 'New Plan',
+                                  duration: '30 days',
+                                  basicPrice: 99,
+                                  basicOriginalPrice: 199,
+                                  ultraPrice: 149,
+                                  ultraOriginalPrice: 299,
+                                  features: ['New Feature'],
+                                  popular: false
+                              };
+                              setLocalSettings({...localSettings, subscriptionPlans: [...(localSettings.subscriptionPlans || []), newPlan]});
+                          }}
+                          className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors flex items-center gap-1"
+                      >
+                          <Plus size={14} /> Add Plan
+                      </button>
+                  </div>
                   <div className="space-y-4">
-                      {['WEEKLY', 'MONTHLY', '3_MONTHLY', 'YEARLY', 'LIFETIME'].map((tier) => {
-                          const prices = subPrices[tier] || { BASIC: 0, ULTRA: 0 };
+                      {(localSettings.subscriptionPlans || []).map((plan, idx) => {
+                          const updatePlan = (field: string, value: any) => {
+                              const newPlans = [...localSettings.subscriptionPlans!];
+                              newPlans[idx] = { ...newPlans[idx], [field]: value };
+                              setLocalSettings({...localSettings, subscriptionPlans: newPlans});
+                          };
+
                           return (
-                              <div key={tier} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
-                                  <div className="font-bold text-sm text-slate-700 w-32">{tier.replace('_', ' ')}</div>
-                                  <div className="flex gap-4">
+                              <div key={plan.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative group transition-all hover:border-blue-200">
+                                  <button
+                                      onClick={() => {
+                                          if(confirm("Delete this plan?")) {
+                                              const newPlans = localSettings.subscriptionPlans!.filter(p => p.id !== plan.id);
+                                              setLocalSettings({...localSettings, subscriptionPlans: newPlans});
+                                          }
+                                      }}
+                                      className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-red-50 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                      <Trash2 size={16} />
+                                  </button>
+
+                                  <div className="grid grid-cols-2 gap-4 mb-4 pr-10">
                                       <div>
-                                          <label className="text-[10px] font-bold text-slate-400 block">BASIC Price</label>
-                                          <input
-                                              type="number"
-                                              value={prices.BASIC}
-                                              onChange={e => {
-                                                  setSubPrices({...subPrices, [tier]: {...prices, BASIC: Number(e.target.value)}});
-                                              }}
-                                              className="w-24 p-1 border rounded text-sm font-bold"
-                                          />
+                                          <label className="text-[10px] font-bold text-slate-500 uppercase">Plan Name</label>
+                                          <input type="text" value={plan.name} onChange={e => updatePlan('name', e.target.value)} className="w-full p-2 border rounded font-bold" placeholder="e.g. Monthly" />
                                       </div>
                                       <div>
-                                          <label className="text-[10px] font-bold text-slate-400 block">ULTRA Price</label>
-                                          <input
-                                              type="number"
-                                              value={prices.ULTRA}
-                                              onChange={e => {
-                                                  setSubPrices({...subPrices, [tier]: {...prices, ULTRA: Number(e.target.value)}});
-                                              }}
-                                              className="w-24 p-1 border rounded text-sm font-bold"
-                                          />
+                                          <label className="text-[10px] font-bold text-slate-500 uppercase">Duration Label</label>
+                                          <input type="text" value={plan.duration} onChange={e => updatePlan('duration', e.target.value)} className="w-full p-2 border rounded font-medium text-slate-600" placeholder="e.g. 30 days" />
+                                      </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-4">
+                                      {/* BASIC TIER CONFIG */}
+                                      <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                                          <h5 className="text-xs font-black text-blue-800 mb-2 flex items-center justify-between">BASIC (PRO) TIER</h5>
+                                          <div className="flex gap-2">
+                                              <div className="flex-1">
+                                                  <label className="text-[9px] font-bold text-slate-500 block">Dummy Price (₹)</label>
+                                                  <input type="number" value={plan.basicOriginalPrice} onChange={e => updatePlan('basicOriginalPrice', Number(e.target.value))} className="w-full p-1.5 border rounded text-xs line-through text-slate-400" />
+                                              </div>
+                                              <div className="flex-1">
+                                                  <label className="text-[9px] font-bold text-blue-600 block">Selling Price (₹)</label>
+                                                  <input type="number" value={plan.basicPrice} onChange={e => updatePlan('basicPrice', Number(e.target.value))} className="w-full p-1.5 border border-blue-300 rounded text-xs font-bold text-blue-700 bg-blue-50" />
+                                              </div>
+                                          </div>
+                                      </div>
+
+                                      {/* ULTRA TIER CONFIG */}
+                                      <div className="bg-purple-50/50 p-3 rounded-xl border border-purple-100">
+                                          <h5 className="text-xs font-black text-purple-800 mb-2 flex items-center justify-between">ULTRA (MAX) TIER</h5>
+                                          <div className="flex gap-2">
+                                              <div className="flex-1">
+                                                  <label className="text-[9px] font-bold text-slate-500 block">Dummy Price (₹)</label>
+                                                  <input type="number" value={plan.ultraOriginalPrice} onChange={e => updatePlan('ultraOriginalPrice', Number(e.target.value))} className="w-full p-1.5 border rounded text-xs line-through text-slate-400" />
+                                              </div>
+                                              <div className="flex-1">
+                                                  <label className="text-[9px] font-bold text-purple-600 block">Selling Price (₹)</label>
+                                                  <input type="number" value={plan.ultraPrice} onChange={e => updatePlan('ultraPrice', Number(e.target.value))} className="w-full p-1.5 border border-purple-300 rounded text-xs font-bold text-purple-700 bg-purple-50" />
+                                              </div>
+                                          </div>
                                       </div>
                                   </div>
                               </div>
                           );
                       })}
                   </div>
-                  <button
-                      onClick={() => {
-                          const updatedPlans = (localSettings.subscriptionPlans || []).map(plan => {
-                              const tierId = plan.id.toUpperCase();
-                              if (subPrices[tierId]) {
-                                  return {
-                                      ...plan,
-                                      basicPrice: subPrices[tierId].BASIC,
-                                      ultraPrice: subPrices[tierId].ULTRA
-                                  };
-                              }
-                              return plan;
-                          });
-                          setLocalSettings({...localSettings, subscriptionPlans: updatedPlans});
-                          alert("Plan prices updated locally. Click 'Save Settings' to apply globally.");
-                      }}
-                      className="mt-4 bg-purple-600 text-white px-4 py-2 rounded-lg font-bold text-sm shadow hover:bg-purple-700"
-                  >
-                      Apply Subscription Prices
-                  </button>
               </div>
 
               {/* STORE FEATURE LIST (Moved from General Settings) */}
