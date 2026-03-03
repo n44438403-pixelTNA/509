@@ -50,7 +50,84 @@ export const TodayMcqSession: React.FC<Props> = ({ user, topics, onClose, onComp
 
     const loadTopicData = async (index: number) => {
         if (index >= topics.length) {
-            onComplete(sessionResults);
+            if (sessionResults.length === 0) {
+                onComplete([]);
+                return;
+            }
+
+            // --- MEGA ANALYSIS COMBINATION ---
+            // User requested: "ek hi analisis me sare topic ķe question honge ek saath mega analysis aayega"
+            // We combine all individual topic results into ONE mega result.
+            let totalQ = 0;
+            let totalScore = 0;
+            let totalCorrect = 0;
+            let totalWrong = 0;
+            let megaOmrData: any[] = [];
+            let megaWrongQuestions: any[] = [];
+            let megaTopicAnalysis: Record<string, any> = {};
+
+            sessionResults.forEach(res => {
+                totalQ += res.totalQuestions;
+                totalScore += res.score;
+                totalCorrect += res.correctCount;
+                totalWrong += res.wrongCount;
+
+                // Merge OMR Data (adjusting indices so they don't overlap in the UI)
+                const startIndex = megaOmrData.length;
+                if (res.omrData) {
+                    res.omrData.forEach(omr => {
+                        megaOmrData.push({ ...omr, qIndex: startIndex + omr.qIndex });
+                    });
+                }
+
+                // Merge Wrong Questions (adjusting indices)
+                if (res.wrongQuestions) {
+                    res.wrongQuestions.forEach(wq => {
+                        megaWrongQuestions.push({ ...wq, qIndex: startIndex + wq.qIndex });
+                    });
+                }
+
+                // Merge Topic Analysis
+                if (res.topicAnalysis) {
+                    Object.keys(res.topicAnalysis).forEach(key => {
+                        if (!megaTopicAnalysis[key]) {
+                            megaTopicAnalysis[key] = { ...res.topicAnalysis![key] };
+                        } else {
+                            megaTopicAnalysis[key].total += res.topicAnalysis![key].total;
+                            megaTopicAnalysis[key].correct += res.topicAnalysis![key].correct;
+                            megaTopicAnalysis[key].percentage = Math.round((megaTopicAnalysis[key].correct / megaTopicAnalysis[key].total) * 100);
+                        }
+                    });
+                }
+            });
+
+            const percentage = totalQ > 0 ? (totalScore / totalQ) * 100 : 0;
+            let performanceTag: 'EXCELLENT' | 'GOOD' | 'BAD' | 'VERY_BAD' = 'GOOD';
+            if (percentage >= 80) performanceTag = 'EXCELLENT';
+            else if (percentage < 50) performanceTag = 'BAD';
+
+            const megaResult: MCQResult = {
+                id: `mega-rev-${Date.now()}`,
+                userId: user.id,
+                chapterId: 'mega-revision',
+                subjectId: 'mega-revision',
+                subjectName: 'Mega Revision Session',
+                chapterTitle: `Revision Analysis (${topics.length} Topics)`,
+                date: new Date().toISOString(),
+                totalQuestions: totalQ,
+                correctCount: totalCorrect,
+                wrongCount: totalWrong,
+                score: totalScore,
+                totalTimeSeconds: totalTime,
+                averageTimePerQuestion: totalQ > 0 ? totalTime / totalQ : 0,
+                performanceTag: performanceTag,
+                omrData: megaOmrData,
+                wrongQuestions: megaWrongQuestions,
+                topicAnalysis: megaTopicAnalysis
+            };
+
+            // Call onComplete with the SINGLE mega result
+            onComplete([megaResult]);
             return;
         }
 
@@ -267,6 +344,16 @@ export const TodayMcqSession: React.FC<Props> = ({ user, topics, onClose, onComp
         }, 800); // Reduced delay to 800ms for faster transition
     };
 
+    // MEGA ANALYSIS OVERLAY (Triggers when all topics are done but before passing to parent to allow review)
+    if (currentIndex >= topics.length) {
+        // We will call onComplete immediately, but since this component unmounts upon onComplete,
+        // we rely on the parent (RevisionHub) to display the Marksheet (Mega Analysis).
+        // Wait, the parent (RevisionHub) handles the "showCompletedMarksheets".
+        // But the user requested: "ek hi analisis me sare topic ķe question honge ek saath mega analysis aayega"
+        // This means we should COMBINE all session results into ONE Mega MCQResult before returning.
+        return null;
+    }
+
     if (loading) {
         return (
             <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center">
@@ -293,25 +380,6 @@ export const TodayMcqSession: React.FC<Props> = ({ user, topics, onClose, onComp
         );
     }
 
-    // MICRO SUMMARY OVERLAY (Replaces Full Result Screen)
-    if (topicSummary) {
-        return (
-            <div className="fixed inset-0 z-[120] bg-black/80 flex flex-col items-center justify-center animate-in fade-in p-6 text-center">
-                <div className="bg-white p-6 rounded-3xl w-full max-w-sm shadow-2xl scale-in-center">
-                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4 animate-bounce" />
-                    <h3 className="text-xl font-black text-slate-800 mb-2">Topic Completed!</h3>
-                    <p className="text-sm text-slate-500 mb-4">{topicSummary.name}</p>
-                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                        <p className="text-xs font-bold text-slate-400 uppercase">Your Score</p>
-                        <p className="text-4xl font-black text-indigo-600">
-                            {topicSummary.score} <span className="text-lg text-slate-300">/ {topicSummary.total}</span>
-                        </p>
-                    </div>
-                    <p className="text-xs font-bold text-slate-400 mt-4 animate-pulse">Saving & Moving Next...</p>
-                </div>
-            </div>
-        );
-    }
 
     // MCQ Question View
     const question = currentMcqData[qIndex];

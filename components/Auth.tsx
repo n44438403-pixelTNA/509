@@ -4,7 +4,7 @@ import { ADMIN_EMAIL } from '../constants';
 import { saveUserToLive, auth, getUserByEmail, getUserByMobileOrId, rtdb, getUserData } from '../firebase';
 import { ref, set } from "firebase/database";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { UserPlus, LogIn, Lock, User as UserIcon, Phone, Mail, ShieldCheck, ArrowRight, School, GraduationCap, Layers, KeyRound, Copy, Check, AlertTriangle, XCircle, MessageCircle, Send, RefreshCcw, ShieldAlert, HelpCircle } from 'lucide-react';
+import { UserPlus, LogIn, Lock, User as UserIcon, Phone, Mail, ShieldCheck, ArrowRight, School, GraduationCap, Layers, KeyRound, Copy, Check, AlertTriangle, XCircle, MessageCircle, Send, RefreshCcw, ShieldAlert, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { LoginGuide } from './LoginGuide';
 import { CustomAlert } from './CustomDialogs';
 import { SpeakButton } from './SpeakButton';
@@ -53,6 +53,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
   // LOGIN REQUEST TIMER STATE
   const [requestTimestamp, setRequestTimestamp] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
       const s = localStorage.getItem('nst_system_settings');
@@ -604,7 +605,15 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
               {view === 'SIGNUP' && (
                   <>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Full Name</label><input name="name" type="text" placeholder="Real Name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
-                    <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Password (8-20 Chars)</label><input name="password" type="password" placeholder="Create Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={20} /></div>
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Password (8-20 Chars)</label>
+                        <div className="relative">
+                            <input name="password" type={showPassword ? "text" : "password"} placeholder="Create Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl pr-10" maxLength={20} />
+                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
+                    </div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Real Email Address</label><input name="email" type="email" placeholder="your.email@gmail.com" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile (10 Digits)</label><input name="mobile" type="tel" placeholder="Mobile Number" value={formData.mobile} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={10} /></div>
                     <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Create Account</button>
@@ -614,7 +623,15 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
               {view === 'LOGIN' && (
                   <>
                      <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile / User ID</label><input name="id" type="text" placeholder="Enter Mobile Number or ID" value={formData.id} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl font-bold" /></div>
-                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Password</label><input name="password" type="password" placeholder="Enter Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl font-bold" /></div>
+                     <div className="space-y-1.5">
+                         <label className="text-xs font-bold text-slate-500 uppercase">Password</label>
+                         <div className="relative">
+                             <input name="password" type={showPassword ? "text" : "password"} placeholder="Enter Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl font-bold pr-10" />
+                             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                             </button>
+                         </div>
+                     </div>
                      <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4 shadow-lg hover:bg-blue-700">Login</button>
                   </>
               )}

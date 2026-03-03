@@ -127,18 +127,24 @@ export const resetAllContent = async () => {
 export const saveUserToLive = async (user: any) => {
   try {
     if (!user || !user.id) return;
-    
+
     // Sanitize data before saving
     const sanitizedUser = sanitizeForFirestore(user);
 
-    // INDEPENDENT WRITES: One failure should not block the other
+    // EXTRACT BULKY DATA FOR SEGREGATION
+    const { mcqHistory, usageHistory, progress, testResults, inbox, ...coreProfile } = sanitizedUser;
+
     const promises = [];
-    
-    // 1. RTDB
-    promises.push(set(ref(rtdb, `users/${user.id}`), sanitizedUser).catch(e => console.error("RTDB Save Error:", e)));
-    
-    // 2. Firestore
-    promises.push(setDoc(doc(db, "users", user.id), sanitizedUser).catch(e => console.error("Firestore Save Error:", e)));
+
+    // 1. Save Core Profile to RTDB & Firestore (users/{uid})
+    promises.push(set(ref(rtdb, `users/${user.id}`), coreProfile).catch(e => console.error("RTDB Core Save Error:", e)));
+    promises.push(setDoc(doc(db, "users", user.id), coreProfile).catch(e => console.error("Firestore Core Save Error:", e)));
+
+    // 2. Save Bulky Data to Subcollections or Document Extensions to avoid 1MB document limit
+    // Note: To keep things intact for the current frontend without massive refactoring,
+    // we save the bulky data in a parallel collection `user_data/{uid}`
+    const bulkyData = { mcqHistory, usageHistory, progress, testResults, inbox };
+    promises.push(setDoc(doc(db, "user_data", user.id), bulkyData).catch(e => console.error("Firestore Bulky Data Save Error:", e)));
 
     await Promise.all(promises);
   } catch (error) {
@@ -167,13 +173,28 @@ export const subscribeToUsers = (callback: (users: any[]) => void) => {
 
 export const getUserData = async (userId: string) => {
     try {
+        let coreData: any = null;
+
         // Try RTDB
         const snap = await get(ref(rtdb, `users/${userId}`));
-        if (snap.exists()) return snap.val();
-        
-        // Try Firestore
-        const docSnap = await getDoc(doc(db, "users", userId));
-        if (docSnap.exists()) return docSnap.data();
+        if (snap.exists()) {
+             coreData = snap.val();
+        } else {
+            // Try Firestore
+            const docSnap = await getDoc(doc(db, "users", userId));
+            if (docSnap.exists()) {
+                 coreData = docSnap.data();
+            }
+        }
+
+        if (coreData) {
+             // Fetch segregated bulky data
+             const bulkySnap = await getDoc(doc(db, "user_data", userId)).catch(() => null);
+             if (bulkySnap && bulkySnap.exists()) {
+                  return { ...coreData, ...bulkySnap.data() };
+             }
+             return coreData;
+        }
 
         return null;
     } catch (e) { console.error(e); return null; }
