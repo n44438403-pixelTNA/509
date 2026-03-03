@@ -125,6 +125,7 @@ type AdminTab =
   | 'DEPLOY'
   | 'EVENT_MANAGER' // NEW
   | 'NSTA_CONTROL' // NEW - Replaces APP_SOUL
+  | 'POPUP_MANAGER' // NEW
   | 'DOCUMENTATION'; // NEW
 
 interface ContentConfig {
@@ -9960,6 +9961,362 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
 
       {activeTab === 'NSTA_CONTROL' && (
           <NstaFeatureManager settings={localSettings} onUpdateSettings={setLocalSettings} onBack={() => setActiveTab('DASHBOARD')} />
+      )}
+
+      {/* --- POPUP MANAGER TAB --- */}
+      {activeTab === 'POPUP_MANAGER' && (
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 animate-in slide-in-from-right">
+              <div className="flex items-center gap-4 mb-6 border-b pb-4">
+                  <button onClick={() => setActiveTab('DASHBOARD')} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><ArrowLeft size={20} /></button>
+                  <h3 className="text-xl font-black text-slate-800">Master Popup Manager</h3>
+              </div>
+
+              <p className="text-sm text-slate-600 mb-6 bg-blue-50 p-4 rounded-xl border border-blue-100">
+                  Control all application popups from one place. Turn them ON/OFF and set how frequently they should appear.
+              </p>
+
+              <div className="space-y-6 max-w-3xl">
+                  {/* Daily Tracker Popup */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold text-slate-800">Daily Tracker Popup</h4>
+                          <input
+                              type="checkbox"
+                              className="w-5 h-5 accent-blue-600"
+                              checked={localSettings.globalPopupManager?.dailyTracker?.enabled ?? true}
+                              onChange={(e) => {
+                                  const config = localSettings.globalPopupManager || {
+                                      dailyTracker: { enabled: true, intervalHours: 24 },
+                                      featurePopup: { enabled: true, intervalHours: 24 },
+                                      rewardPopup: { enabled: true, intervalHours: 24 },
+                                      expiryPopup: { enabled: true, triggerHoursBeforeExpiry: 48 },
+                                      referralPopup: { enabled: true, intervalHours: 72 },
+                                      updatePopup: { enabled: false, intervalHours: 24, forceShow: false, message: '', title: '' },
+                                      infoPopup: { enabled: false, intervalHours: 24, title: '', message: '' }
+                                  };
+                                  setLocalSettings({
+                                      ...localSettings,
+                                      globalPopupManager: {
+                                          ...config,
+                                          dailyTracker: { ...(config.dailyTracker || {intervalHours: 24}), enabled: e.target.checked }
+                                      }
+                                  });
+                              }}
+                          />
+                      </div>
+                      <p className="text-xs text-slate-500 mb-3">Shows daily streak and study progress.</p>
+                      <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold text-slate-600">Show every (Hours):</label>
+                          <input
+                              type="number"
+                              value={localSettings.globalPopupManager?.dailyTracker?.intervalHours ?? 24}
+                              onChange={(e) => {
+                                  const config = localSettings.globalPopupManager || {} as any;
+                                  setLocalSettings({
+                                      ...localSettings,
+                                      globalPopupManager: {
+                                          ...config,
+                                          dailyTracker: { ...(config.dailyTracker || {enabled: true}), intervalHours: Number(e.target.value) }
+                                      }
+                                  });
+                              }}
+                              className="w-20 p-1 border rounded text-sm text-center"
+                          />
+                      </div>
+                  </div>
+
+                  {/* Feature Popup */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold text-slate-800">Feature/Upsell Popup</h4>
+                          <input
+                              type="checkbox"
+                              className="w-5 h-5 accent-blue-600"
+                              checked={localSettings.globalPopupManager?.featurePopup?.enabled ?? true}
+                              onChange={(e) => {
+                                  const config = localSettings.globalPopupManager || {} as any;
+                                  setLocalSettings({
+                                      ...localSettings,
+                                      globalPopupManager: {
+                                          ...config,
+                                          featurePopup: { ...(config.featurePopup || {intervalHours: 24}), enabled: e.target.checked }
+                                      }
+                                  });
+                              }}
+                          />
+                      </div>
+                      <p className="text-xs text-slate-500 mb-3">Upsells premium features to free users.</p>
+                      <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold text-slate-600">Show every (Hours):</label>
+                          <input
+                              type="number"
+                              value={localSettings.globalPopupManager?.featurePopup?.intervalHours ?? 24}
+                              onChange={(e) => {
+                                  const config = localSettings.globalPopupManager || {} as any;
+                                  setLocalSettings({
+                                      ...localSettings,
+                                      globalPopupManager: {
+                                          ...config,
+                                          featurePopup: { ...(config.featurePopup || {enabled: true}), intervalHours: Number(e.target.value) }
+                                      }
+                                  });
+                              }}
+                              className="w-20 p-1 border rounded text-sm text-center"
+                          />
+                      </div>
+                  </div>
+
+                  {/* Reward Popup */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold text-slate-800">Daily Reward/Login Popup</h4>
+                          <input
+                              type="checkbox"
+                              className="w-5 h-5 accent-blue-600"
+                              checked={localSettings.globalPopupManager?.rewardPopup?.enabled ?? true}
+                              onChange={(e) => {
+                                  const config = localSettings.globalPopupManager || {} as any;
+                                  setLocalSettings({
+                                      ...localSettings,
+                                      globalPopupManager: {
+                                          ...config,
+                                          rewardPopup: { ...(config.rewardPopup || {intervalHours: 24}), enabled: e.target.checked }
+                                      }
+                                  });
+                              }}
+                          />
+                      </div>
+                      <p className="text-xs text-slate-500 mb-3">Grants daily coins upon login.</p>
+                      <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold text-slate-600">Show every (Hours):</label>
+                          <input
+                              type="number"
+                              value={localSettings.globalPopupManager?.rewardPopup?.intervalHours ?? 24}
+                              onChange={(e) => {
+                                  const config = localSettings.globalPopupManager || {} as any;
+                                  setLocalSettings({
+                                      ...localSettings,
+                                      globalPopupManager: {
+                                          ...config,
+                                          rewardPopup: { ...(config.rewardPopup || {enabled: true}), intervalHours: Number(e.target.value) }
+                                      }
+                                  });
+                              }}
+                              className="w-20 p-1 border rounded text-sm text-center"
+                          />
+                      </div>
+                  </div>
+
+                  {/* Expiry Warning Popup */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold text-slate-800">Expiry Warning Popup</h4>
+                          <input
+                              type="checkbox"
+                              className="w-5 h-5 accent-blue-600"
+                              checked={localSettings.globalPopupManager?.expiryPopup?.enabled ?? true}
+                              onChange={(e) => {
+                                  const config = localSettings.globalPopupManager || {} as any;
+                                  setLocalSettings({
+                                      ...localSettings,
+                                      globalPopupManager: {
+                                          ...config,
+                                          expiryPopup: { ...(config.expiryPopup || {triggerHoursBeforeExpiry: 48}), enabled: e.target.checked }
+                                      }
+                                  });
+                              }}
+                          />
+                      </div>
+                      <p className="text-xs text-slate-500 mb-3">Warns premium users when their plan is about to expire.</p>
+                      <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold text-slate-600">Trigger (Hours before expiry):</label>
+                          <input
+                              type="number"
+                              value={localSettings.globalPopupManager?.expiryPopup?.triggerHoursBeforeExpiry ?? 48}
+                              onChange={(e) => {
+                                  const config = localSettings.globalPopupManager || {} as any;
+                                  setLocalSettings({
+                                      ...localSettings,
+                                      globalPopupManager: {
+                                          ...config,
+                                          expiryPopup: { ...(config.expiryPopup || {enabled: true}), triggerHoursBeforeExpiry: Number(e.target.value) }
+                                      }
+                                  });
+                              }}
+                              className="w-20 p-1 border rounded text-sm text-center"
+                          />
+                      </div>
+                  </div>
+
+                  {/* Referral Popup */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold text-slate-800">Referral/Invite Popup</h4>
+                          <input
+                              type="checkbox"
+                              className="w-5 h-5 accent-blue-600"
+                              checked={localSettings.globalPopupManager?.referralPopup?.enabled ?? false}
+                              onChange={(e) => {
+                                  const config = localSettings.globalPopupManager || {} as any;
+                                  setLocalSettings({
+                                      ...localSettings,
+                                      globalPopupManager: {
+                                          ...config,
+                                          referralPopup: { ...(config.referralPopup || {intervalHours: 72}), enabled: e.target.checked }
+                                      }
+                                  });
+                              }}
+                          />
+                      </div>
+                      <p className="text-xs text-slate-500 mb-3">Prompts users to invite friends.</p>
+                      <div className="flex items-center gap-2">
+                          <label className="text-xs font-bold text-slate-600">Show every (Hours):</label>
+                          <input
+                              type="number"
+                              value={localSettings.globalPopupManager?.referralPopup?.intervalHours ?? 72}
+                              onChange={(e) => {
+                                  const config = localSettings.globalPopupManager || {} as any;
+                                  setLocalSettings({
+                                      ...localSettings,
+                                      globalPopupManager: {
+                                          ...config,
+                                          referralPopup: { ...(config.referralPopup || {enabled: false}), intervalHours: Number(e.target.value) }
+                                      }
+                                  });
+                              }}
+                              className="w-20 p-1 border rounded text-sm text-center"
+                          />
+                      </div>
+                  </div>
+
+                  {/* Custom Info Popup */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-bold text-slate-800">Advanced Custom Popups</h4>
+                          <button
+                              onClick={() => {
+                                  const current = localSettings.adminCustomPopups || [];
+                                  setLocalSettings({
+                                      ...localSettings,
+                                      adminCustomPopups: [
+                                          ...current,
+                                          { enabled: true, title: 'New Popup', message: '', type: 'INFO', showTo: 'ALL', copyableText: '' }
+                                      ]
+                                  });
+                              }}
+                              className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-xs font-bold hover:bg-blue-200"
+                          >
+                              + Add Custom Popup
+                          </button>
+                      </div>
+                      <p className="text-xs text-slate-500 mb-3">Create targeted popups with copyable text (e.g. for redeem codes, specific subjects, or classes).</p>
+
+                      <div className="space-y-4 mt-4">
+                          {(localSettings.adminCustomPopups || []).map((popup, idx) => (
+                              <div key={idx} className="bg-white p-4 border border-slate-200 rounded-lg relative">
+                                  <button
+                                      onClick={() => {
+                                          const current = [...(localSettings.adminCustomPopups || [])];
+                                          current.splice(idx, 1);
+                                          setLocalSettings({...localSettings, adminCustomPopups: current});
+                                      }}
+                                      className="absolute top-2 right-2 text-red-500 hover:bg-red-50 p-1 rounded"
+                                  >
+                                      <Trash2 size={16} />
+                                  </button>
+
+                                  <div className="grid grid-cols-2 gap-3 mb-3">
+                                      <div>
+                                          <label className="text-[10px] font-bold text-slate-400 uppercase">Status</label>
+                                          <div className="flex items-center gap-2 mt-1">
+                                              <input
+                                                  type="checkbox"
+                                                  checked={popup.enabled}
+                                                  onChange={(e) => {
+                                                      const current = [...(localSettings.adminCustomPopups || [])];
+                                                      current[idx].enabled = e.target.checked;
+                                                      setLocalSettings({...localSettings, adminCustomPopups: current});
+                                                  }}
+                                                  className="w-4 h-4 accent-blue-600"
+                                              />
+                                              <span className="text-xs font-bold">{popup.enabled ? 'Active' : 'Disabled'}</span>
+                                          </div>
+                                      </div>
+                                      <div>
+                                          <label className="text-[10px] font-bold text-slate-400 uppercase">Target Audience</label>
+                                          <select
+                                              value={popup.showTo}
+                                              onChange={(e) => {
+                                                  const current = [...(localSettings.adminCustomPopups || [])];
+                                                  current[idx].showTo = e.target.value as any;
+                                                  setLocalSettings({...localSettings, adminCustomPopups: current});
+                                              }}
+                                              className="w-full p-1 border rounded text-xs font-bold"
+                                          >
+                                              <option value="ALL">All Users</option>
+                                              <option value="FREE">Free Users Only</option>
+                                              <option value="PREMIUM">Premium Users Only</option>
+                                          </select>
+                                      </div>
+                                  </div>
+
+                                  <div className="space-y-3">
+                                      <input
+                                          type="text"
+                                          placeholder="Popup Title"
+                                          value={popup.title}
+                                          onChange={(e) => {
+                                              const current = [...(localSettings.adminCustomPopups || [])];
+                                              current[idx].title = e.target.value;
+                                              setLocalSettings({...localSettings, adminCustomPopups: current});
+                                          }}
+                                          className="w-full p-2 border rounded text-sm font-bold"
+                                      />
+                                      <textarea
+                                          placeholder="Main message content..."
+                                          value={popup.message}
+                                          onChange={(e) => {
+                                              const current = [...(localSettings.adminCustomPopups || [])];
+                                              current[idx].message = e.target.value;
+                                              setLocalSettings({...localSettings, adminCustomPopups: current});
+                                          }}
+                                          className="w-full p-2 border rounded text-sm h-20"
+                                      />
+                                      <div>
+                                          <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Copyable Text (e.g. Coupon Code)</label>
+                                          <input
+                                              type="text"
+                                              placeholder="Leave blank if not needed"
+                                              value={popup.copyableText || ''}
+                                              onChange={(e) => {
+                                                  const current = [...(localSettings.adminCustomPopups || [])];
+                                                  current[idx].copyableText = e.target.value;
+                                                  setLocalSettings({...localSettings, adminCustomPopups: current});
+                                              }}
+                                              className="w-full p-2 border border-dashed border-blue-300 bg-blue-50 text-blue-800 font-mono text-sm rounded"
+                                          />
+                                      </div>
+                                  </div>
+                              </div>
+                          ))}
+                          {(!localSettings.adminCustomPopups || localSettings.adminCustomPopups.length === 0) && (
+                              <p className="text-center text-xs text-slate-400 py-4">No custom popups created yet.</p>
+                          )}
+                      </div>
+                  </div>
+              </div>
+
+              <div className="mt-8">
+                  <button
+                      onClick={() => handleSaveSettings()}
+                      disabled={isSettingsSaving}
+                      className={`bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 ${isSettingsSaving ? 'opacity-70 cursor-wait' : ''}`}
+                  >
+                      {isSettingsSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+                      {isSettingsSaving ? 'Saving...' : 'Save Popup Settings'}
+                  </button>
+              </div>
+          </div>
       )}
 
             {/* --- VISIBILITY CONTROL (Legacy Restored) --- */}
