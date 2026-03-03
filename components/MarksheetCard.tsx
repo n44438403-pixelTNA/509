@@ -814,10 +814,25 @@ export const MarksheetCard: React.FC<Props> = ({ result, user, settings, onClose
       }
       return (
       <div id="marksheet-style-1" className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200 relative overflow-hidden break-inside-avoid">
-          {/* Header */}
+          {/* App Logo & Name Header */}
+          <div className="flex flex-col items-center mb-6 pb-6 border-b border-slate-100">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-2 overflow-hidden border border-slate-100 p-1">
+                  {settings?.appLogo ? (
+                      <img src={settings.appLogo} alt="App Logo" className="w-full h-full object-contain" />
+                  ) : (
+                      <h1 className="text-xl font-black text-blue-600">{settings?.appShortName || 'IIC'}</h1>
+                  )}
+              </div>
+              <h1 className="text-xl font-black text-slate-900 tracking-tight text-center">
+                  {settings?.appName || 'IDEAL INSPIRATION CLASSES'}
+              </h1>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Official Result Marksheet</p>
+          </div>
+
+          {/* Test Info Header */}
           <div className="flex justify-between items-start border-b border-slate-100 pb-6 mb-6">
               <div>
-                  <h2 className="text-3xl font-black text-slate-800 tracking-tight">{result.chapterTitle}</h2>
+                  <h2 className="text-2xl font-black text-slate-800 tracking-tight">{result.chapterTitle}</h2>
                   <p className="text-slate-500 font-medium mt-1">{result.subjectName}</p>
               </div>
               <div className="text-right">

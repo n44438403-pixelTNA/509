@@ -298,6 +298,8 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
   const [pendingApp, setPendingApp] = useState<{app: any, cost: number} | null>(null);
   const [contentViewStep, setContentViewStep] = useState<'SUBJECTS' | 'CHAPTERS' | 'PLAYER'>('SUBJECTS');
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+
+  const [showGuestPopup, setShowGuestPopup] = useState(user.role === 'GUEST');
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loadingChapters, setLoadingChapters] = useState(false);
@@ -1090,12 +1092,12 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
       if (activeTab === 'STORE') return <Store user={user} settings={settings} onUserUpdate={handleUserUpdate} />;
       if (activeTab === 'PROFILE') return (
                 <div className="animate-in fade-in zoom-in duration-300 pb-24">
-                    <div className={`rounded-3xl p-8 text-center text-white mb-6 shadow-xl relative overflow-hidden transition-all duration-500 ${
+                    <div className={`rounded-3xl p-8 text-center text-slate-800 mb-6 shadow-sm border border-slate-200 relative overflow-hidden transition-all duration-500 ${
                         user.subscriptionLevel === 'ULTRA' && user.isPremium
-                        ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 shadow-purple-500/50 ring-2 ring-purple-400/50'
+                        ? 'bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 shadow-purple-500/10 ring-2 ring-purple-200/50'
                         : user.subscriptionLevel === 'BASIC' && user.isPremium
-                        ? 'bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-600 shadow-blue-500/50'
-                        : 'bg-gradient-to-br from-slate-700 to-slate-900'
+                        ? 'bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 shadow-blue-500/10'
+                        : 'bg-gradient-to-br from-white to-slate-50'
                     }`}>
                         {/* ANIMATED BACKGROUND FOR ULTRA */}
                         {user.subscriptionLevel === 'ULTRA' && user.isPremium && (
@@ -1799,6 +1801,53 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
 
         {/* MINI PLAYER */}
         <MiniPlayer track={currentAudioTrack} onClose={() => setCurrentAudioTrack(null)} />
+
+        {/* GUEST REGISTRATION POPUP */}
+        {showGuestPopup && (
+            <div className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in">
+                <div className="bg-white p-6 rounded-3xl w-full max-w-sm shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-10 -mt-10 z-0"></div>
+                    <div className="relative z-10 text-center">
+                        <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <UserIcon size={32} />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-800 mb-2">Register Your Account</h3>
+                        <p className="text-sm text-slate-500 mb-6 font-medium">
+                            Secure your account to access it on any device. Your data will be safe after registration.
+                        </p>
+
+                        <form onSubmit={async (e) => {
+                            e.preventDefault();
+                            const formData = new FormData(e.currentTarget as HTMLFormElement);
+                            const mobile = formData.get('mobile') as string;
+                            if (mobile.length !== 10) {
+                                showAlert("Please enter a valid 10-digit mobile number", "ERROR");
+                                return;
+                            }
+
+                            const generatedPassword = Math.random().toString(36).slice(-8);
+                            const updatedUser = {
+                                ...user,
+                                role: 'STUDENT',
+                                mobile: mobile,
+                                password: generatedPassword,
+                            };
+
+                            await handleUserUpdate(updatedUser);
+                            setShowGuestPopup(false);
+
+                            showAlert(`Registration Successful!\n\nYour Temporary Password is: ${generatedPassword}\n\nYou can change this later in your profile.`, "SUCCESS");
+                        }}>
+                            <div className="space-y-4 text-left mb-6">
+                                <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Mobile Number</label>
+                                <input name="mobile" type="tel" placeholder="Enter 10-digit mobile" maxLength={10} required className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none font-bold" />
+                            </div>
+                            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-blue-700 transition-colors">Done</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {/* FLOATING ACTION MENU */}
         {(activeTab === 'HOME' || activeTab === 'REVISION' || activeTab === 'AI_HUB' || activeTab === 'PROFILE' || activeTab === 'HISTORY' || (activeTab as string) === 'ANALYTICS') && (

@@ -248,6 +248,39 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
       }
   };
 
+  const handleGuestAccess = async () => {
+      try {
+          setStatusCheckLoading(true);
+          const newId = generateUserId();
+          const guestUser: User = {
+              id: `guest_${newId}`,
+              displayId: newId,
+              name: 'Guest User',
+              email: `guest_${newId}@temp.com`,
+              password: '',
+              mobile: '',
+              role: 'GUEST',
+              createdAt: new Date().toISOString(),
+              credits: 0,
+              streak: 0,
+              lastLoginDate: new Date().toISOString(),
+              board: '',
+              classLevel: '',
+              provider: 'guest',
+              profileCompleted: false,
+              progress: {},
+              redeemedCodes: [],
+              subscriptionTier: 'FREE',
+              isPremium: false
+          };
+          onLogin(guestUser);
+      } catch (e: any) {
+          setError("Guest Access Failed: " + e.message);
+      } finally {
+          setStatusCheckLoading(false);
+      }
+  };
+
   const handleGoogleAuth = async () => {
       try {
           const provider = new GoogleAuthProvider();
@@ -577,7 +610,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
 
         {view === 'HOME' && (
             <div className="space-y-4 relative z-10 animate-in fade-in">
-                 <button type="button" onClick={handleGoogleAuth} className="w-full bg-white text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 hover:bg-slate-50 transition-all shadow-md active:scale-95 border-2 border-transparent">
+                 <button type="button" onClick={handleGoogleAuth} className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm border border-slate-300">
                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                      Continue with Google
                  </button>
@@ -586,7 +619,15 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                      <div className="flex-1 h-px bg-slate-200"></div>
                  </div>
 
-                 <button type="button" onClick={() => setView('SIGNUP')} className="w-full bg-slate-300 hover:bg-slate-400 text-slate-900 font-black py-4 rounded-full transition-all active:scale-95 shadow-sm">
+                 <button type="button" onClick={handleGuestAccess} className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm border border-slate-300">
+                     Guest Access
+                 </button>
+
+                 <div className="flex items-center gap-4 my-3 opacity-0">
+                     <div className="flex-1 h-px bg-slate-200"></div>
+                 </div>
+
+                 <button type="button" onClick={() => setView('SIGNUP')} className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm border border-slate-300">
                      Sign up
                  </button>
 
@@ -594,7 +635,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                      <div className="flex-1 h-px bg-slate-200"></div>
                  </div>
 
-                 <button type="button" onClick={() => setView('LOGIN')} className="w-full bg-transparent border-2 border-slate-300 text-slate-800 font-bold py-4 rounded-full hover:bg-slate-50 hover:border-slate-400 transition-all active:scale-95">
+                 <button type="button" onClick={() => setView('LOGIN')} className="w-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-4 rounded-full flex items-center justify-center gap-3 transition-all active:scale-95 shadow-sm border border-slate-300">
                      Log in
                  </button>
             </div>
@@ -614,7 +655,6 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                             </button>
                         </div>
                     </div>
-                    <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Real Email Address</label><input name="email" type="email" placeholder="your.email@gmail.com" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile (10 Digits)</label><input name="mobile" type="tel" placeholder="Mobile Number" value={formData.mobile} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={10} /></div>
                     <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Create Account</button>
                   </>
