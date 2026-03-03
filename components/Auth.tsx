@@ -413,18 +413,17 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
         } catch (err: any) {
             console.error("Login Error:", err);
             if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-                // FALLBACK: If Firebase fails, check if we have a valid manual user in our database matching the credentials.
-                // This handles edge cases where Firebase Auth state is misaligned with our Firestore/LocalStorage.
-                const manualUser = users.find(u => (u.email === loginEmail || u.mobile === input || u.displayId === input) && u.password === pass);
-                if (manualUser) {
-                    if (manualUser.isArchived) { setError('Account Deleted.'); return; }
-                    console.warn("Firebase Auth failed, but local credentials match. Forcing anonymous login to proceed.");
-                    try { await signInAnonymously(auth); } catch(e) {}
-                    logActivity("LOGIN", "Student Logged In (Fallback Manual)", manualUser);
-                    onLogin(manualUser);
-                    return;
+                // Determine if this user was originally a Google user by checking our local database
+                const existingUser = users.find(u => u.email === loginEmail || u.mobile === input || u.displayId === input);
+                if (existingUser && existingUser.provider === 'google') {
+                    setError("This account was created with Google. Please click 'Continue with Google' to log in.");
+                } else if (existingUser && existingUser.password === pass) {
+                    // Password matches our DB, but Firebase rejected it.
+                    // This can happen if Firebase Auth account was deleted but not our Firestore record, OR if linking failed.
+                    setError("Firebase Auth failed. If you linked Google, please login with Google. (Contact Admin)");
+                } else {
+                    setError("Invalid Email/ID or Password.");
                 }
-                setError("Invalid Email/ID or Password.");
             } else {
                 setError(err.message || "Login Failed. Try again.");
             }
