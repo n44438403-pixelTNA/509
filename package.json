@@ -14,7 +14,7 @@
     "@heroicons/react": "^2.2.0",
     "clsx": "^2.1.1",
     "drizzle-zod": "^0.8.3",
-    "firebase": "^12.8.0",
+    "firebase": "^12.10.0",
     "framer-motion": "^12.34.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.0",

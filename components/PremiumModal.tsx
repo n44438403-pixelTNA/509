@@ -163,13 +163,6 @@ export const PremiumModal: React.FC<Props> = ({ chapter, user, credits, isAdmin,
                 <button onClick={handleClose} className="bg-slate-100 p-1.5 rounded-full"><X size={20} className="text-slate-500" /></button>
             </div>
 
-            {/* Flash Sale Banner */}
-            {isFlashSaleActive && (
-                <div className="bg-red-600 text-white p-2 text-center text-xs font-bold flex justify-center items-center gap-2 animate-pulse">
-                    <Zap size={14} className="fill-yellow-300 text-yellow-300" />
-                    Special Offer: 10% OFF • Ends in {timeLeft}
-                </div>
-            )}
             
             <div className="flex-1 overflow-y-auto">
                 {loading ? (

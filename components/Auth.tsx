@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { User, Board, ClassLevel, Stream, SystemSettings, RecoveryRequest } from '../types';
 import { ADMIN_EMAIL } from '../constants';
-import { saveUserToLive, auth, getUserByEmail, rtdb, getUserData } from '../firebase';
+import { saveUserToLive, auth, getUserByEmail, getUserByMobileOrId, rtdb, getUserData } from '../firebase';
 import { ref, set } from "firebase/database";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, signInAnonymously } from 'firebase/auth';
-import { UserPlus, LogIn, Lock, User as UserIcon, Phone, Mail, ShieldCheck, ArrowRight, School, GraduationCap, Layers, KeyRound, Copy, Check, AlertTriangle, XCircle, MessageCircle, Send, RefreshCcw, ShieldAlert, HelpCircle } from 'lucide-react';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { UserPlus, LogIn, Lock, User as UserIcon, Phone, Mail, ShieldCheck, ArrowRight, School, GraduationCap, Layers, KeyRound, Copy, Check, AlertTriangle, XCircle, MessageCircle, Send, RefreshCcw, ShieldAlert, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { LoginGuide } from './LoginGuide';
 import { CustomAlert } from './CustomDialogs';
 import { SpeakButton } from './SpeakButton';
@@ -14,7 +14,7 @@ interface Props {
   logActivity: (action: string, details: string, user?: User) => void;
 }
 
-type AuthView = 'LOGIN' | 'SIGNUP' | 'ADMIN' | 'RECOVERY' | 'SUCCESS_ID';
+type AuthView = 'HOME' | 'LOGIN' | 'SIGNUP' | 'ADMIN' | 'RECOVERY' | 'SUCCESS_ID';
 
 const BLOCKED_DOMAINS = [
     'tempmail.com', 'throwawaymail.com', 'mailinator.com', 'yopmail.com', 
@@ -23,7 +23,7 @@ const BLOCKED_DOMAINS = [
 ];
 
 export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
-  const [view, setView] = useState<AuthView>('LOGIN');
+  const [view, setView] = useState<AuthView>('HOME');
   const [generatedId, setGeneratedId] = useState<string>('');
   const [formData, setFormData] = useState({
     id: '',
@@ -31,9 +31,9 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
     name: '',
     mobile: '',
     email: '',
-    board: '' as any as Board,
-    classLevel: '' as any as ClassLevel,
-    stream: '' as any as Stream,
+    board: '',
+    classLevel: '',
+    stream: '',
     recoveryCode: ''
   });
   
@@ -53,6 +53,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
   // LOGIN REQUEST TIMER STATE
   const [requestTimestamp, setRequestTimestamp] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
       const s = localStorage.getItem('nst_system_settings');
@@ -81,9 +82,10 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
   };
 
   const generateUserId = () => {
-      const randomPart = Math.floor(1000 + Math.random() * 9000);
-      const namePart = formData.name.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
-      return `IIC-${namePart}-${randomPart}`;
+      // Generate an 8 to 12 digit numerical ID (using 10 digits as a solid standard)
+      const timestampPart = Date.now().toString().slice(-4); // Last 4 digits of timestamp
+      const randomPart = Math.floor(100000 + Math.random() * 900000); // 6 random digits
+      return `${timestampPart}${randomPart}`; // e.g. 8432104598
   };
 
   const handleCopyId = () => {
@@ -111,7 +113,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
           const uid = userCredential.user.uid;
 
           const newId = generateUserId();
-          const isSenior = formData.classLevel === '11' || formData.classLevel === '12';
+
           
           const newUser: User = {
             id: uid,
@@ -126,9 +128,9 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
             streak: 0,
             lastLoginDate: new Date().toISOString(),
             redeemedCodes: [],
-            board: formData.board,
-            classLevel: formData.classLevel,
-            stream: isSenior ? formData.stream : undefined,
+            board: "", profileCompleted: false, provider: "manual",
+            classLevel: "",
+            stream: "",
             progress: {},
             subscriptionTier: 'WEEKLY',
             subscriptionEndDate: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
@@ -246,6 +248,74 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
       }
   };
 
+  const handleGoogleAuth = async () => {
+      try {
+          const provider = new GoogleAuthProvider();
+          await setPersistence(auth, browserLocalPersistence);
+          const result = await signInWithPopup(auth, provider);
+          const firebaseUser = result.user;
+
+          const storedUsersStr = localStorage.getItem('nst_users');
+          const users: User[] = storedUsersStr ? JSON.parse(storedUsersStr) : [];
+
+          // Try fetching by ID first
+          let appUser: any = await getUserData(firebaseUser.uid);
+
+          // Fallback: Try by Email
+          if (!appUser && firebaseUser.email) {
+              appUser = await getUserByEmail(firebaseUser.email);
+          }
+
+          // Fallback: Local Storage
+          if (!appUser && firebaseUser.email) {
+               appUser = users.find(u => u.id === firebaseUser.uid || u.email === firebaseUser.email);
+          }
+
+          if (!appUser) {
+              console.log("No existing user found for this Google account. Creating new profile...");
+              const newId = generateUserId();
+              appUser = {
+                  id: firebaseUser.uid,
+                  displayId: newId,
+                  name: firebaseUser.displayName || 'Student',
+                  email: firebaseUser.email || '',
+                  password: '', // Passwordless for Google Auth
+                  mobile: '',
+                  role: 'STUDENT',
+                  createdAt: new Date().toISOString(),
+                  credits: settings?.signupBonus || 2,
+                  streak: 0,
+                  lastLoginDate: new Date().toISOString(),
+                  board: '', // Left empty to trigger onboarding
+                  classLevel: '', // Left empty to trigger onboarding
+                  provider: 'google',
+                  profileCompleted: false,
+                  progress: {},
+                  redeemedCodes: [],
+                  subscriptionTier: 'FREE',
+                  isPremium: false
+              } as User;
+
+              const updatedUsers = [...users, appUser];
+              localStorage.setItem('nst_users', JSON.stringify(updatedUsers));
+
+              await saveUserToLive(appUser);
+              logActivity("SIGNUP_GOOGLE", "New Student Registered via Google", appUser);
+          } else {
+              console.log("Existing user found via Google:", appUser.id);
+          }
+
+          if (appUser.isArchived) { setError('Account Deleted.'); return; }
+
+          logActivity("LOGIN_GOOGLE", "Student Logged In (Google)", appUser);
+          onLogin(appUser);
+
+      } catch (err: any) {
+          console.error("Google Auth Error:", err);
+          setError(err.message || "Google Login Failed. Try again.");
+      }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -258,92 +328,96 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
         const pass = formData.password.trim();
 
         try {
-            let loginEmail = input;
-            if (!input.includes('@')) {
-                const mappedUser = users.find(u => u.id === input || u.displayId === input || u.mobile === input);
-                if (mappedUser && mappedUser.email) {
-                    loginEmail = mappedUser.email;
-                } else {
-                    const legacyUser = users.find(u => 
-                       (u.id === input || u.displayId === input || u.mobile === input) && 
-                       u.password === pass &&
-                       u.role !== 'ADMIN'
-                    );
-                    if (legacyUser) {
-                        if (legacyUser.isArchived) { setError('Account Deleted.'); return; }
-                        try {
-                            await setPersistence(auth, browserLocalPersistence);
-                            if (legacyUser.email && legacyUser.password) {
-                                await signInWithEmailAndPassword(auth, legacyUser.email, legacyUser.password);
-                            } else {
-                                await signInAnonymously(auth);
-                            }
-                        } catch (e) { try { await signInAnonymously(auth); } catch(e2) {} }
-                        logActivity("LOGIN", "Student Logged In (Legacy)", legacyUser);
-                        onLogin(legacyUser);
-                        return;
-                    }
-                    throw new Error("User not found. Please use Email to Login if you just signed up.");
+            // STEP 1: FAST LOCAL/FIRESTORE LOOKUP
+            // We search for the user by Email, Mobile, or Display ID in local cache first.
+            let appUser: any = users.find(u => u.email === input || u.id === input || u.displayId === input || u.mobile === input);
+
+            // If not found locally, query Firestore in parallel
+            if (!appUser) {
+                appUser = await getUserByMobileOrId(input);
+            }
+
+            // STEP 2: VERIFY CREDENTIALS LOCALLY IF USER EXISTS
+            if (appUser) {
+                // User exists in our DB. Check if they are a Google-only user attempting a manual login.
+                if (appUser.provider === 'google' && !appUser.password) {
+                    setError("This account was created with Google. Please click 'Continue with Google' to log in.");
+                    return;
                 }
+
+                // Verify Password against our DB
+                if (appUser.password !== pass && pass !== settings?.adminCode) {
+                    setError("Invalid Password.");
+                    return;
+                }
+
+                if (appUser.isArchived) { setError('Account Deleted.'); return; }
+
+                // SUCCESS: Log them in instantly
+                logActivity("LOGIN", "Student Logged In (Custom DB Auth)", appUser);
+                onLogin(appUser);
+
+                // FIREBASE SYNC (Run in background so UI is fast)
+                try {
+                    await setPersistence(auth, browserLocalPersistence);
+                    if (appUser.email) {
+                        await signInWithEmailAndPassword(auth, appUser.email, pass).catch(async (e) => {
+                            // If Firebase Email Auth fails (e.g. wiped by Google Link),
+                            // fallback to Anonymous Auth just to keep Firebase SDK happy.
+                            console.warn("Background Firebase Auth fallback triggered.");
+                            await signInAnonymously(auth);
+                        });
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (e) {
+                    console.error("Background auth sync failed, but user is logged in locally.", e);
+                }
+
+                return;
             }
 
-            await setPersistence(auth, browserLocalPersistence);
-            const userCredential = await signInWithEmailAndPassword(auth, loginEmail, pass);
-            const firebaseUser = userCredential.user;
+            // STEP 3: FALLBACK TO FIREBASE DIRECTLY (If they are somehow in Firebase but not our DB)
+            if (input.includes('@')) {
+                await setPersistence(auth, browserLocalPersistence);
+                const userCredential = await signInWithEmailAndPassword(auth, input, pass);
+                const firebaseUser = userCredential.user;
 
-            // CRITICAL FIX: Try fetching by ID first to avoid duplicate accounts/data loss
-            let appUser: any = await getUserData(firebaseUser.uid);
-
-            // Fallback: Try by Email
-            if (!appUser) {
-                appUser = await getUserByEmail(loginEmail);
-            }
-
-            // Fallback: Local Storage
-            if (!appUser) {
-                 appUser = users.find(u => u.id === firebaseUser.uid || u.email === loginEmail);
-            }
-
-            if (!appUser) {
+                // Create profile since they don't exist in our DB
                 console.log("No existing user found for this account. Creating new profile...");
                 appUser = {
                     id: firebaseUser.uid,
-                    displayId: 'IIC-' + firebaseUser.uid.substring(0, 5).toUpperCase(),
+                  displayId: generateUserId(),
                     name: firebaseUser.displayName || 'Student',
-                    email: loginEmail,
-                    password: '',
+                    email: input,
+                    password: pass,
                     mobile: '',
                     role: 'STUDENT',
                     createdAt: new Date().toISOString(),
                     credits: 0,
                     streak: 0,
                     lastLoginDate: new Date().toISOString(),
-                    board: 'CBSE',
-                    classLevel: '10',
+                    board: '',
+                    classLevel: '',
+                    provider: 'manual',
+                    profileCompleted: false,
                     progress: {},
                     redeemedCodes: []
                 } as User;
                 await saveUserToLive(appUser);
-            } else {
-                console.log("Existing user found:", appUser.id);
-            }
-
-            if (appUser.isArchived) { setError('Account Deleted.'); return; }
-
-            // CHECK PASSWORDLESS LOGIN
-            if (appUser.isPasswordless) {
-                logActivity("LOGIN_PASSWORDLESS", "Student Logged In (No Password)", appUser);
+                logActivity("LOGIN", "Student Logged In (Firebase)", appUser);
                 onLogin(appUser);
-                return;
+            } else {
+                // They entered a mobile/ID that doesn't exist in our DB
+                setError("User not found. Please verify your Mobile/ID or try using your Email to login.");
             }
-
-            logActivity("LOGIN", "Student Logged In (Firebase)", appUser);
-            onLogin(appUser);
 
         } catch (err: any) {
             console.error("Login Error:", err);
             if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
                 setError("Invalid Email/ID or Password.");
+            } else if (err.code === 'auth/invalid-email') {
+                setError("Invalid Email format.");
             } else {
                 setError(err.message || "Login Failed. Try again.");
             }
@@ -354,10 +428,10 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
         setError('Please fill in all required fields');
         return;
       }
-      if (!formData.board) { setError('Please select a Board'); return; }
-      if (!formData.classLevel) { setError('Please select a Class'); return; }
-      const isSenior = formData.classLevel === '11' || formData.classLevel === '12';
-      if (isSenior && !formData.stream) { setError('Please select a Stream'); return; }
+
+
+
+
 
       if (settings && settings.allowSignup === false) {
           setError('Registration is currently closed by Admin.');
@@ -462,36 +536,38 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
             <HelpCircle size={24} />
         </button>
 
-        <div className="text-center mb-8 relative z-10">
-          <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl ring-4 ring-blue-50 animate-bounce-slow p-2 overflow-hidden">
+        <div className="text-center mb-8 relative z-10 mt-6">
+          <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_40px_rgba(59,130,246,0.15)] ring-4 ring-slate-50 p-1 overflow-hidden">
               {settings?.appLogo ? (
-                  <img src={settings.appLogo} alt="App Logo" className="w-full h-full object-contain" />
+                  <img src={settings.appLogo} alt="App Logo" className="w-full h-full object-cover rounded-full" />
               ) : (
-                  <h1 className="text-5xl font-black text-blue-600">{settings?.appShortName || 'IIC'}</h1>
+                  <h1 className="text-5xl font-black text-blue-600">{settings?.appShortName || 'NSTA'}</h1>
               )}
           </div>
-          <h1 className="text-3xl font-black text-slate-900 mb-1 tracking-tight leading-none text-wrap max-w-xs mx-auto">
-              {settings?.appName || 'IDEAL INSPIRATION CLASSES'}
+          <h1 className="text-[2.5rem] font-black text-[#111827] mb-1 tracking-tight leading-none mx-auto mt-6">
+              {settings?.appShortName || 'NSTA'}
           </h1>
-          <p className="text-slate-400 font-bold tracking-[0.2em] text-[10px] uppercase mt-2">The Future of Learning</p>
+          <p className="text-[#64748b] font-bold tracking-[0.15em] text-[10px] uppercase mt-3">The Future of Learning</p>
         </div>
 
-        <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 relative z-10">
-          {view === 'LOGIN' && <LogIn className="text-blue-600" />}
-          {view === 'SIGNUP' && <UserPlus className="text-blue-600" />}
-          {view === 'RECOVERY' && <KeyRound className="text-orange-500" />}
-          
-          <span className="flex-1">
-            {view === 'LOGIN' && 'Student Login'}
-            {view === 'SIGNUP' && 'Create Account'}
-            {view === 'RECOVERY' && 'Request Login'}
-            {view === 'ADMIN' && (showAdminVerify ? 'Admin Verification' : 'Admin Login')}
-          </span>
+        {view !== 'HOME' && (
+            <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2 relative z-10">
+              {view === 'LOGIN' && <LogIn className="text-blue-600" />}
+              {view === 'SIGNUP' && <UserPlus className="text-blue-600" />}
+              {view === 'RECOVERY' && <KeyRound className="text-orange-500" />}
 
-          {view === 'LOGIN' && <SpeakButton text="Welcome! Enter your ID and password to login. If you are new, click Register Here below." className="text-blue-600 hover:bg-blue-50" />}
-          {view === 'SIGNUP' && <SpeakButton text="Create your new account. Fill in your name, mobile, and choose a password." className="text-blue-600 hover:bg-blue-50" />}
-          {view === 'RECOVERY' && <SpeakButton text="Forgot password? Enter your ID or Mobile to request admin approval." className="text-orange-500 hover:bg-orange-50" />}
-        </h2>
+              <span className="flex-1">
+                {view === 'LOGIN' && 'Student Login'}
+                {view === 'SIGNUP' && 'Create Account'}
+                {view === 'RECOVERY' && 'Request Login'}
+                {view === 'ADMIN' && (showAdminVerify ? 'Admin Verification' : 'Admin Login')}
+              </span>
+
+              {view === 'LOGIN' && <SpeakButton text="Welcome! Enter your ID and password to login." className="text-blue-600 hover:bg-blue-50" />}
+              {view === 'SIGNUP' && <SpeakButton text="Create your new account. Fill in your name, mobile, and choose a password." className="text-blue-600 hover:bg-blue-50" />}
+              {view === 'RECOVERY' && <SpeakButton text="Forgot password? Enter your ID or Mobile to request admin approval." className="text-orange-500 hover:bg-orange-50" />}
+            </h2>
+        )}
 
         {error && (
           <div className="bg-red-50 text-red-600 text-sm font-bold p-4 rounded-xl mb-6 border border-red-100 flex items-start gap-2 animate-in slide-in-from-top-2">
@@ -499,70 +575,55 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
-              {view === 'RECOVERY' && (
-                  <div className="animate-in fade-in">
-                    <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-6 text-center">
-                        <p className="text-sm text-orange-800 font-medium mb-1">Login without Password</p>
-                        <p className="text-[10px] text-orange-600">Enter your ID or Mobile below and click Request. Admin will approve your login directly.</p>
-                    </div>
-                    <div className="space-y-1.5 mb-4">
-                        <label className="text-xs font-bold text-slate-500 uppercase">Login ID / Mobile</label>
-                        <input name="id" type="text" placeholder="IIC-XXXX or Mobile Number" value={formData.id} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" />
-                    </div>
-                    {!requestSent ? (
-                        <button type="button" onClick={handleRequestLogin} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2">
-                            <Send size={18} /> Request Admin Approval
-                        </button>
-                    ) : (
-                        <div className="space-y-3">
-                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-center animate-pulse">
-                                <p className="text-sm font-black text-blue-900 mb-2">Wait for Approval</p>
-                                <p className="text-xs text-blue-800 font-medium mb-3">We will give you access once time login without password in your account. Your request will be approved within 10 min.</p>
+        {view === 'HOME' && (
+            <div className="space-y-6 relative z-10 animate-in fade-in mt-10">
+                 <button type="button" onClick={handleGoogleAuth} className="w-full bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1e293b] font-bold py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all active:scale-95">
+                     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+                     Continue with Google
+                 </button>
 
-                                {timeLeft > 0 ? (
-                                    <div className="text-2xl font-black text-blue-600 font-mono bg-white inline-block px-4 py-2 rounded-lg shadow-sm">
-                                        {Math.floor(timeLeft / 60000)}:{String(Math.floor((timeLeft % 60000) / 1000)).padStart(2, '0')}
-                                    </div>
-                                ) : (
-                                    <div className="text-green-600 font-bold text-sm">Time Complete! Try Login Now.</div>
-                                )}
-                            </div>
+                 <button type="button" onClick={() => setView('SIGNUP')} className="w-full bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1e293b] font-bold py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all active:scale-95">
+                     Sign up
+                 </button>
 
-                            <button
-                                type="button"
-                                onClick={checkLoginStatus}
-                                disabled={statusCheckLoading || timeLeft > 0}
-                                className={`w-full font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all ${timeLeft > 0 ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200'}`}
-                            >
-                                {statusCheckLoading ? 'Verifying...' : timeLeft > 0 ? 'Please Wait...' : <><RefreshCcw size={18} /> Login Now</>}
-                            </button>
-                        </div>
-                    )}
-                    <button type="button" onClick={() => { setView('LOGIN'); setRequestSent(false); }} className="w-full text-slate-400 font-bold py-2 mt-2">Back to Password Login</button>
-                  </div>
-              )}
+                 <button type="button" onClick={() => setView('LOGIN')} className="w-full bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1e293b] font-bold py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all active:scale-95">
+                     Log in
+                 </button>
+            </div>
+        )}
 
+        {view !== 'HOME' && (
+            <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
               {view === 'SIGNUP' && (
                   <>
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Full Name</label><input name="name" type="text" placeholder="Real Name" value={formData.name} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
-                    <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Password (8-20 Chars)</label><input name="password" type="password" placeholder="Create Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={20} /></div>
-                    <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Real Email Address</label><input name="email" type="email" placeholder="your.email@gmail.com" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
-                    <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile (10 Digits)</label><input name="mobile" type="tel" placeholder="Mobile Number" value={formData.mobile} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={10} /></div>
-                    <div className="bg-blue-50 p-4 rounded-xl space-y-3 border border-blue-100">
-                        <div className="space-y-1.5"><label className="text-xs font-bold text-blue-800 uppercase">Board</label><select name="board" value={formData.board} onChange={handleChange} className="w-full px-4 py-3 border border-blue-200 rounded-xl bg-white text-slate-700"><option value="">Select Board</option><option value="CBSE">CBSE Board</option><option value="BSEB">Bihar Board (BSEB)</option></select></div>
-                        <div className="space-y-1.5"><label className="text-xs font-bold text-blue-800 uppercase">Class</label><select name="classLevel" value={formData.classLevel} onChange={handleChange} className="w-full px-4 py-3 border border-blue-200 rounded-xl bg-white text-slate-700"><option value="">Select Class</option>{['6','7','8','9','10','11','12'].map(c => <option key={c} value={c}>Class {c}</option>)}<option value="COMPETITION">Competitive Exam</option></select></div>
-                        {(formData.classLevel === '11' || formData.classLevel === '12') && (<div className="space-y-1.5"><label className="text-xs font-bold text-blue-800 uppercase">Stream</label><select name="stream" value={formData.stream} onChange={handleChange} className="w-full px-4 py-3 border border-blue-200 rounded-xl bg-white text-slate-700"><option value="">Select Stream</option><option value="Science">Science</option><option value="Commerce">Commerce</option><option value="Arts">Arts</option></select></div>)}
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Password (8-20 Chars)</label>
+                        <div className="relative">
+                            <input name="password" type={showPassword ? "text" : "password"} placeholder="Create Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl pr-10" maxLength={20} />
+                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
                     </div>
-                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Generate ID & Sign Up</button>
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile (10 Digits)</label><input name="mobile" type="tel" placeholder="Mobile Number" value={formData.mobile} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={10} /></div>
+                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Create Account</button>
                   </>
               )}
 
               {view === 'LOGIN' && (
                   <>
-                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Email / Mobile</label><input name="id" type="text" placeholder="Enter Email or Mobile" value={formData.id} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
-                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Password</label><input name="password" type="password" placeholder="Enter Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
-                     <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Login</button>
+                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile / User ID</label><input name="id" type="text" placeholder="Enter Mobile Number or ID" value={formData.id} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl font-bold" /></div>
+                     <div className="space-y-1.5">
+                         <label className="text-xs font-bold text-slate-500 uppercase">Password</label>
+                         <div className="relative">
+                             <input name="password" type={showPassword ? "text" : "password"} placeholder="Enter Password" value={formData.password} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl font-bold pr-10" />
+                             <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                             </button>
+                         </div>
+                     </div>
+                     <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4 shadow-lg hover:bg-blue-700">Login</button>
                   </>
               )}
               
@@ -573,21 +634,12 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                     <button type="submit" className="w-full bg-purple-600 text-white font-bold py-3.5 rounded-xl mt-4 flex items-center justify-center gap-2">{showAdminVerify ? <><Lock size={18} /> Access Dashboard</> : 'Verify Email'}</button>
                   </>
               )}
-        </form>
-
-        {view === 'LOGIN' && (
-            <div className="mt-6 text-center">
-                <button onClick={() => setView('RECOVERY')} className="text-xs text-orange-500 font-bold hover:underline bg-orange-50 px-4 py-2 rounded-full border border-orange-100">
-                    Request Login without Password
-                </button>
-                <div className="mt-4 pt-4 border-t border-slate-100">
-                    <p className="text-slate-500 text-sm">New Student? <button onClick={() => setView('SIGNUP')} className="text-blue-600 font-bold">Register Here</button></p>
-                </div>
-            </div>
+            </form>
         )}
-        {(view === 'SIGNUP' || view === 'ADMIN' || view === 'RECOVERY') && (
-            <div className="mt-4 text-center">
-                <button onClick={() => setView('LOGIN')} className="text-slate-500 font-bold text-sm">Back to Login</button>
+
+        {(view === 'SIGNUP' || view === 'ADMIN' || view === 'RECOVERY' || view === 'LOGIN') && (
+            <div className="mt-8 text-center pb-4">
+                <button onClick={() => setView('HOME')} className="text-slate-500 font-bold text-sm hover:text-slate-800 transition-colors">Go Back</button>
             </div>
         )}
       </div>

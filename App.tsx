@@ -7,6 +7,8 @@ import { getChapterData, saveChapterData, checkFirebaseConnection, saveTestResul
 import { recalculateSubscriptionStatus, addSubscription } from './utils/subscriptionUtils';
 import { signInAnonymously } from 'firebase/auth';
 import { fetchChapters, fetchLessonContent } from './services/groq';
+import { Onboarding }
+from './components/Onboarding';
 import { BoardSelection } from './components/BoardSelection';
 import { ClassSelection } from './components/ClassSelection';
 import { SubjectSelection } from './components/SubjectSelection';
@@ -634,42 +636,8 @@ const App: React.FC = () => {
                }
           }
 
-          // 2. Expiry Warning Notifications (24 Hours)
-          if (updatedUser.isPremium && updatedUser.subscriptionEndDate) {
-               const now = new Date();
-               const end = new Date(updatedUser.subscriptionEndDate);
-               const diff = end.getTime() - now.getTime();
-               const hoursLeft = diff / (1000 * 60 * 60);
-
-               if (hoursLeft > 0 && hoursLeft <= 24) {
-                   const lastWarnKey = `nst_expiry_warn_${updatedUser.id}`;
-                   const lastWarnTime = parseInt(localStorage.getItem(lastWarnKey) || '0');
-
-                   // Warn every 1 hour (as per user request)
-                   if (now.getTime() - lastWarnTime > 60 * 60 * 1000) {
-                        const msg = `⚠️ Your ${updatedUser.subscriptionTier} Plan expires in ${Math.round(hoursLeft)}h. Basic plan will remain active if available.`;
-                        setAlertConfig({isOpen: true, message: msg});
-
-                        // Add to Inbox
-                        const warnMsg: InboxMessage = {
-                            id: `warn-${Date.now()}`,
-                            text: msg,
-                            date: new Date().toISOString(),
-                            read: false,
-                            type: 'TEXT'
-                        };
-
-                        // We must update the user object again with the new message
-                        const userWithMsg = { ...updatedUser, inbox: [warnMsg, ...(updatedUser.inbox || [])] };
-
-                        localStorage.setItem('nst_current_user', JSON.stringify(userWithMsg));
-                        saveUserToLive(userWithMsg);
-                        setState(prev => ({...prev, user: userWithMsg}));
-
-                        localStorage.setItem(lastWarnKey, now.getTime().toString());
-                   }
-               }
-          }
+          // Note: Expiry warning logic has been migrated and expanded in StudentDashboard.tsx
+          // based on settings.popupConfigs. Removing it from App.tsx to prevent duplicate/competing popups.
       };
 
       const interval = setInterval(checkExpiry, 60000); // Check every minute
@@ -738,27 +706,11 @@ const App: React.FC = () => {
 
       // POPUP QUEUE INITIALIZATION
       const queue: ('TRACKER' | 'CHALLENGE' | 'WELCOME' | 'THREE_TIER')[] = [];
-      
       const loggedInUserStr = localStorage.getItem('nst_current_user');
-      const today = new Date().toDateString();
-
-      // DAILY CHALLENGE POPUP REMOVED AS PER REQUEST
-      // if (loggedInUserStr) {
-      //     const lastChallenge = localStorage.getItem('nst_last_daily_challenge_date');
-      //     if (lastChallenge !== today) {
-      //         queue.push('CHALLENGE');
-      //     }
-      // }
-
-      // 4. Welcome (Once per install) - DISABLED
       const hasSeenWelcome = localStorage.getItem('nst_has_seen_welcome');
-      // if (!hasSeenWelcome && hasAcceptedTerms && loadedSettings.showWelcomePopup !== false) {
-          // queue.push('WELCOME');
-      // }
 
       setPopupQueue(queue);
 
-    // console.log("Restoring user from localStorage:", loggedInUserStr);
     if (loggedInUserStr) {
       try {
         let user: User = JSON.parse(loggedInUserStr);
@@ -791,6 +743,10 @@ const App: React.FC = () => {
 
         let initialView = (user.role === 'ADMIN' || user.role === 'SUB_ADMIN') ? 'ADMIN_DASHBOARD' : 'STUDENT_DASHBOARD';
         
+        if (user.role === 'STUDENT' && !user.profileCompleted) {
+             initialView = 'ONBOARDING';
+        }
+
         // RESET CLASS IF LOCKED (e.g. Competition Mode)
         let safeClass = user.classLevel || null;
         const freeModes = loadedSettings.appMode?.allowedModesForFree || ['SCHOOL'];
@@ -976,14 +932,24 @@ const App: React.FC = () => {
     }
   }, [state.user?.id, state.view, state.settings]);
 
-  const handleLogin = (user: User) => {
-    // console.log("Login successful, user:", user);
-    // Only save if NOT impersonating
+    const handleLogin = (user: User) => {
     if (!state.originalAdmin) {
         localStorage.setItem('nst_current_user', JSON.stringify(user));
     }
-    saveUserToLive(user); // छात्र का डेटा क्लाउड पर भेजें
+    saveUserToLive(user);
     localStorage.setItem('nst_has_seen_welcome', 'true');
+
+    // Check if onboarding is needed
+    if (user.role === 'STUDENT' && !user.profileCompleted) {
+        setState(prev => ({
+          ...prev,
+          user,
+          view: 'ONBOARDING',
+          showWelcome: false
+        }));
+        return;
+    }
+
     setState(prev => ({ 
       ...prev, 
       user, 
@@ -2268,6 +2234,7 @@ const App: React.FC = () => {
                 )}
                 
                 {(!activeWeeklyTest && state.view === 'BOARDS') && <BoardSelection onSelect={handleBoardSelect} onBack={goBack} />}
+                {state.view === 'ONBOARDING' && state.user && <Onboarding user={state.user} onComplete={handleLogin} onLogout={handleLogout} />}
                 {state.view === 'CLASSES' && <ClassSelection selectedBoard={state.selectedBoard} allowedClasses={state.user?.role === 'ADMIN' ? undefined : state.settings.allowedClasses} settings={state.settings} user={state.user} onSelect={handleClassSelect} onBack={goBack} />}
                 {state.view === 'STREAMS' && <StreamSelection onSelect={handleStreamSelect} onBack={goBack} />}
                 {state.view === 'SUBJECTS' && state.selectedClass && <SubjectSelection classLevel={state.selectedClass} stream={state.selectedStream} board={state.selectedBoard || undefined} onSelect={handleSubjectSelect} onBack={goBack} />}

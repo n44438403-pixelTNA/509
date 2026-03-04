@@ -47,15 +47,20 @@ export const Store: React.FC<Props> = ({ user, settings }) => {
   
   // NEW: Check if event is actually active (now >= startsAt && now < endsAt)
   const isEventActive = () => {
-    if (!event?.enabled || !event?.startsAt || !event?.endsAt) return false;
+    if (!event?.enabled) return false;
     const now = Date.now();
-    const startsAt = new Date(event.startsAt).getTime();
-    const endsAt = new Date(event.endsAt).getTime();
+    // If enabled but no dates provided, assume always active
+    if (!event.startsAt && !event.endsAt) return true;
+
+    // Strict date checking
+    const startsAt = event.startsAt ? new Date(event.startsAt).getTime() : 0;
+    const endsAt = event.endsAt ? new Date(event.endsAt).getTime() : Infinity;
+
     return now >= startsAt && now < endsAt;
   };
 
   const activeEvent = isEventActive();
-  const showEventBanner = event?.enabled && ((isSubscribed && event.showToPremiumUsers) || (!isSubscribed && event.showToFreeUsers)) && (event.endsAt ? new Date(event.endsAt).getTime() > Date.now() : true);
+  const showEventBanner = activeEvent && ((isSubscribed && event?.showToPremiumUsers) || (!isSubscribed && event?.showToFreeUsers));
 
   // Countdown Timer Logic
   const [timeLeft, setTimeLeft] = useState<{days: number, hours: number, minutes: number, seconds: number} | null>(null);
@@ -297,7 +302,7 @@ export const Store: React.FC<Props> = ({ user, settings }) => {
               <h2 className="text-4xl font-serif text-white tracking-tight mb-2">Select your plan</h2>
               <p className="text-slate-400 text-sm font-medium">Unlock your full potential today</p>
               
-              {showEventBanner && timeLeft && (
+              {showEventBanner && (
                   <div className={`mt-6 p-6 rounded-3xl relative overflow-hidden shadow-2xl border-2 animate-in zoom-in duration-300 ${
                       activeEvent
                           ? 'bg-gradient-to-r from-red-600 to-rose-600 border-red-500'
@@ -329,17 +334,19 @@ export const Store: React.FC<Props> = ({ user, settings }) => {
                                   </p>
                               </div>
 
-                              <div className="text-right bg-black/30 p-3 rounded-2xl backdrop-blur-md border border-white/20 shrink-0 shadow-lg">
-                                  <p className="text-[9px] font-bold text-white/80 uppercase mb-1 text-center tracking-widest">
-                                      {!activeEvent ? 'Starts In' : 'Ends In'}
-                                  </p>
-                                  <div className="font-mono text-xl font-black text-white tracking-widest text-center tabular-nums drop-shadow-sm">
-                                      {timeLeft.days > 0 && <span>{timeLeft.days}d </span>}
-                                      <span>{String(timeLeft.hours).padStart(2, '0')}:</span>
-                                      <span>{String(timeLeft.minutes).padStart(2, '0')}:</span>
-                                      <span>{String(timeLeft.seconds).padStart(2, '0')}</span>
+                              {timeLeft && (
+                                  <div className="text-right bg-black/30 p-3 rounded-2xl backdrop-blur-md border border-white/20 shrink-0 shadow-lg">
+                                      <p className="text-[9px] font-bold text-white/80 uppercase mb-1 text-center tracking-widest">
+                                          {!activeEvent ? 'Starts In' : 'Ends In'}
+                                      </p>
+                                      <div className="font-mono text-xl font-black text-white tracking-widest text-center tabular-nums drop-shadow-sm">
+                                          {timeLeft.days > 0 && <span>{timeLeft.days}d </span>}
+                                          <span>{String(timeLeft.hours).padStart(2, '0')}:</span>
+                                          <span>{String(timeLeft.minutes).padStart(2, '0')}:</span>
+                                          <span>{String(timeLeft.seconds).padStart(2, '0')}</span>
+                                      </div>
                                   </div>
-                              </div>
+                              )}
                           </div>
                       </div>
                   </div>
@@ -407,8 +414,8 @@ export const Store: React.FC<Props> = ({ user, settings }) => {
                       }
                   }
 
-                  // 2. Renewal Bonus (5% Extra for Existing Premium or History)
-                  if (user.isPremium || (user.subscriptionHistory && user.subscriptionHistory.length > 0)) {
+                  // 2. Renewal Bonus (5% Extra for active Premium users)
+                  if (user.isPremium) {
                       discountPercentVal += 5;
                   }
 
@@ -426,7 +433,7 @@ export const Store: React.FC<Props> = ({ user, settings }) => {
                   const isYearly = plan.name.includes('Yearly');
 
                   // Check if renewal bonus is active for this user (Used for UI Badge only)
-                  const hasRenewalBonus = user.isPremium || (user.subscriptionHistory && user.subscriptionHistory.length > 0);
+                  const hasRenewalBonus = user.isPremium;
 
                   return (
                       <button
@@ -488,7 +495,7 @@ export const Store: React.FC<Props> = ({ user, settings }) => {
                              discountPercentVal += (event?.discountPercent || 0);
                          }
                      }
-                     if (user.isPremium || (user.subscriptionHistory && user.subscriptionHistory.length > 0)) {
+                     if (user.isPremium) {
                          discountPercentVal += 5;
                      }
                      if (user.storeDiscount) {

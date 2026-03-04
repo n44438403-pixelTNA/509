@@ -123,9 +123,11 @@ export interface User {
   isAutoDeductEnabled?: boolean; // NEW: Skip confirmation popup for credit spending
 
   // New Fields for Student Profile
-  board?: Board;
-  classLevel?: ClassLevel;
-  stream?: Stream; // Only for 11/12
+  board?: string;
+  classLevel?: string;
+  stream?: string; // Only for 11/12
+  provider?: 'google' | 'manual';
+  profileCompleted?: boolean;
   
   // Chat & Premium Features
   isPremium?: boolean;
@@ -494,6 +496,19 @@ export interface SystemSettings {
     showToPremiumUsers: boolean;
     showNearExpiryHours: number; // 24
   };
+  adminCustomPopups?: {
+    enabled: boolean;
+    title: string;
+    message: string;
+    type: 'DISCOUNT' | 'FREE_CREDIT' | 'FREE_ACCESS' | 'SUBSCRIPTION' | 'EXPIRY' | 'INFO';
+    actionText?: string;
+    actionUrl?: string;
+    copyableText?: string;
+    subject?: string;
+    class?: string;
+    lesson?: string;
+    showTo: 'ALL' | 'FREE' | 'PREMIUM';
+  }[];
   popupConfigs?: {
       isExpiryWarningEnabled: boolean;
       expiryWarningHours: number;
@@ -508,6 +523,9 @@ export interface SystemSettings {
     showToPremium: boolean;
     intervalMinutes?: number;
     showNearExpiryHours?: number;
+  };
+  creditFreeEvent?: {
+    enabled: boolean;
   };
   dailyChallengeConfig?: {
     mode: 'AUTO' | 'MANUAL';
@@ -612,6 +630,7 @@ export interface SystemSettings {
 }
 
 export interface RevisionConfig {
+    trackWrongAnswers?: boolean;
     thresholds: {
         strong: number; // e.g., 80
         average: number; // e.g., 50 (implied weak < 50)
@@ -982,7 +1001,7 @@ export interface LessonContent {
   analytics?: any; // For passing full analytics data
 }
 
-export type ViewState = 'BOARDS' | 'CLASSES' | 'STREAMS' | 'SUBJECTS' | 'CHAPTERS' | 'LESSON' | 'ADMIN_DASHBOARD' | 'AUDIO_STUDIO' | 'STUDENT_DASHBOARD' | 'UNIVERSAL_CHAT' | 'RULES' | 'IIC' | 'LEADERBOARD';
+export type ViewState = 'ONBOARDING' | 'BOARDS' | 'CLASSES' | 'STREAMS' | 'SUBJECTS' | 'CHAPTERS' | 'LESSON' | 'ADMIN_DASHBOARD' | 'AUDIO_STUDIO' | 'STUDENT_DASHBOARD' | 'UNIVERSAL_CHAT' | 'RULES' | 'IIC' | 'LEADERBOARD';
 
 export interface WeeklyTest {
   id: string;

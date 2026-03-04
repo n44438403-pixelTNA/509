@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { User, ViewState, SystemSettings, Subject, Chapter, MCQItem, RecoveryRequest, ActivityLogEntry, LeaderboardEntry, RecycleBinItem, Stream, Board, ClassLevel, GiftCode, SubscriptionPlan, CreditPackage, SpinReward, HtmlModule, PremiumNoteSlot, ContentInfoConfig, ContentInfoItem, SubscriptionHistoryEntry, UniversalAnalysisLog, ContentType, LessonContent, DeepDiveEntry, AdditionalNoteEntry } from '../types';
-import { List, LayoutDashboard, Users, Search, Trash2, Save, X, Eye, EyeOff, Shield, Megaphone, CheckCircle, ListChecks, Database, FileText, Monitor, Sparkles, Banknote, BrainCircuit, AlertOctagon, ArrowLeft, Key, Bell, ShieldCheck, Lock, Globe, Layers, Zap, PenTool, RefreshCw, RotateCcw, Plus, LogOut, Download, Upload, CreditCard, Ticket, Video, Image as ImageIcon, Type, Link, FileJson, Activity, AlertTriangle, Gift, Book, Mail, Edit3, MessageSquare, ShoppingBag, Cloud, Rocket, Code2, Layers as LayersIcon, Wifi, WifiOff, Copy, Crown, Gamepad2, Calendar, BookOpen, Image, HelpCircle, Youtube, Play, Star, Trophy, Palette, Settings, Headphones, Layout, Bot, LayoutDashboard as DashboardIcon, Loader2, Gauge, LayoutGrid } from 'lucide-react';
+import { List, LayoutDashboard, Users, Search, Trash2, Save, X, Eye, EyeOff, Shield, Megaphone, CheckCircle, ListChecks, Database, FileText, Monitor, Sparkles, Banknote, BrainCircuit, AlertOctagon, ArrowLeft, Key, Bell, ShieldCheck, Lock, Globe, Layers, Zap, PenTool, RefreshCw, RotateCcw, Plus, LogOut, Download, Upload, CreditCard, Ticket, Video, Image as ImageIcon, Type, Link, FileJson, Activity, AlertTriangle, Gift, Book, Mail, Edit3, MessageSquare, ShoppingBag, Cloud, Rocket, Code2, Layers as LayersIcon, Wifi, WifiOff, Copy, Crown, Gamepad2, Calendar, BookOpen, Image, HelpCircle, Youtube, Play, Star, Trophy, Palette, Settings, Headphones, Layout, Bot, LayoutDashboard as DashboardIcon, Loader2, Gauge, LayoutGrid, ArrowUpCircle } from 'lucide-react';
 import { getSubjectsList, DEFAULT_SUBJECTS, DEFAULT_APP_FEATURES, ALL_APP_FEATURES, STUDENT_APP_FEATURES, DEFAULT_CONTENT_INFO_CONFIG, ADMIN_PERMISSIONS, APP_VERSION, STATIC_SYLLABUS, LEVEL_UNLOCKABLE_FEATURES } from '../constants';
 import { fetchChapters, fetchLessonContent } from '../services/groq';
 import { runAutoPilot, runCommandMode } from '../services/autoPilot';
@@ -81,12 +81,12 @@ type AdminTab =
   | 'USERS' 
   | 'NOTIFY_USERS' // NEW
   | 'SUBSCRIPTION_MANAGER'
+  | 'STORE_MANAGER'
   | 'CODES'
   | 'SUBJECTS_MGR'
   /* | 'LEADERBOARD' - REMOVED */
   | 'NOTICES' 
   | 'DATABASE'
-  | 'DEPLOY'         
   | 'ACCESS' 
   | 'SUB_ADMINS'
   /* | 'LOGS' - REMOVED */
@@ -122,7 +122,7 @@ type AdminTab =
   | 'POWER_MANAGER'
   | 'REVISION_LOGIC' // NEW
   | 'PLAN_MATRIX'
-  | 'FEATURE_ACCESS' // NEW
+  | 'DEPLOY'
   | 'EVENT_MANAGER' // NEW
   | 'NSTA_CONTROL' // NEW - Replaces APP_SOUL
   | 'DOCUMENTATION'; // NEW
@@ -528,6 +528,7 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
   const [newPkgName, setNewPkgName] = useState('');
   const [newPkgPrice, setNewPkgPrice] = useState('');
   const [newPkgCredits, setNewPkgCredits] = useState('');
+  const [newPkgDummyPrice, setNewPkgDummyPrice] = useState('');
 
   // --- GLOBAL BOARD CONTEXT (STRICT ISOLATION) ---
   const [adminBoardContext, setAdminBoardContext] = useState<Board>('CBSE');
@@ -1058,11 +1059,20 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
   };
 
   // --- GIFT CODE STATE ---
-  const [newCodeType, setNewCodeType] = useState<'CREDITS' | 'SUBSCRIPTION' | 'DISCOUNT'>('CREDITS');
+  const [newCodeType, setNewCodeType] = useState<'CREDITS' | 'SUBSCRIPTION' | 'DISCOUNT' | 'CONTENT_UNLOCK'>('CREDITS');
   const [newCodeAmount, setNewCodeAmount] = useState(10);
   const [newCodeDiscount, setNewCodeDiscount] = useState(10); // NEW
   const [newCodeSubTier, setNewCodeSubTier] = useState<any>('WEEKLY');
   const [newCodeSubLevel, setNewCodeSubLevel] = useState<any>('BASIC');
+
+  // NEW: State for Content Unlock codes
+  const [newCodeContentType, setNewCodeContentType] = useState<'VIDEO' | 'PDF' | 'MCQ' | 'AUDIO'>('VIDEO');
+  const [newCodeContentBoard, setNewCodeContentBoard] = useState<Board>('CBSE');
+  const [newCodeContentClass, setNewCodeContentClass] = useState<ClassLevel>('10');
+  const [newCodeContentSubject, setNewCodeContentSubject] = useState<string>('');
+  const [newCodeContentChapter, setNewCodeContentChapter] = useState<string>('');
+  const [newCodeContentChaptersList, setNewCodeContentChaptersList] = useState<Chapter[]>([]);
+
   const [newCodeCount, setNewCodeCount] = useState(1);
   const [newCodeMaxUses, setNewCodeMaxUses] = useState(1); // Default 1 (Single Use)
 
@@ -1719,8 +1729,12 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
           return;
       }
 
+      if (newCodeType === 'CONTENT_UNLOCK' && !newCodeContentChapter) {
+          alert("Please select a Chapter to unlock.");
+          return;
+      }
+
       const newCodes: GiftCode[] = [];
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
       
       try {
           for (let i = 0; i < (newCodeCount || 1); i++) {
@@ -1731,6 +1745,15 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                   code += codeChars.charAt(Math.floor(Math.random() * codeChars.length));
               }
 
+              let prefix = 'C';
+              if (newCodeType === 'CONTENT_UNLOCK') {
+                  if (newCodeContentType === 'VIDEO') prefix = 'V';
+                  if (newCodeContentType === 'PDF') prefix = 'N';
+                  if (newCodeContentType === 'MCQ') prefix = 'M';
+                  if (newCodeContentType === 'AUDIO') prefix = 'A';
+                  code = prefix + '-' + code.substring(0, 8);
+              }
+
               const newGiftCode: GiftCode = {
                   id: Date.now().toString() + i,
                   code: code.toUpperCase(),
@@ -1738,6 +1761,7 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                   ...(newCodeType === 'CREDITS' ? { amount: newCodeAmount || 10 } : {}),
                   ...(newCodeType === 'DISCOUNT' ? { discountPercent: newCodeDiscount || 10 } : {}),
                   ...(newCodeType === 'SUBSCRIPTION' ? { subTier: newCodeSubTier || 'WEEKLY', subLevel: newCodeSubLevel || 'BASIC' } : {}),
+                  ...(newCodeType === 'CONTENT_UNLOCK' ? { contentId: newCodeContentChapter, contentType: newCodeContentType } : {}),
                   createdAt: new Date().toISOString(),
                   isRedeemed: false,
                   generatedBy: 'ADMIN',
@@ -1789,12 +1813,13 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
           id: `pkg-${Date.now()}`,
           name: newPkgName,
           price: Number(newPkgPrice),
-          credits: Number(newPkgCredits)
+          credits: Number(newPkgCredits),
+          dummyPrice: newPkgDummyPrice ? Number(newPkgDummyPrice) : undefined
       };
       const currentPkgs = localSettings.packages || [];
       const updatedPkgs = [...currentPkgs, newPkg];
       setLocalSettings({ ...localSettings, packages: updatedPkgs });
-      setNewPkgName(''); setNewPkgPrice(''); setNewPkgCredits('');
+      setNewPkgName(''); setNewPkgPrice(''); setNewPkgCredits(''); setNewPkgDummyPrice('');
   };
 
   const removePackage = (id: string) => {
@@ -2628,47 +2653,54 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
       {/* 1. DASHBOARD HOME */}
       {activeTab === 'DASHBOARD' && (
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mb-6 animate-in fade-in">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col items-center justify-center mb-6 w-full space-y-4">
                   <div className="flex items-center gap-2">
                       <div className="bg-blue-600 p-2 rounded-lg text-white shadow-lg"><Shield size={20} /></div>
-                      <div>
-                          <h2 className="font-black text-slate-800 text-lg leading-none">Admin Console</h2>
-                          <div className="flex items-center gap-2 mt-2">
-                              {/* STRICT BOARD SWITCHER */}
-                              <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-                                  <button onClick={() => handleBoardChange('CBSE')} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${adminBoardContext === 'CBSE' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>CBSE</button>
-                                  <button onClick={() => handleBoardChange('BSEB')} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${adminBoardContext === 'BSEB' ? 'bg-white shadow text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}>BSEB</button>
-                              </div>
-
-                              {/* ONLINE USERS */}
-                              <div className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200" title="Active Users (5m)">
-                                  <div className="relative">
-                                      <Users size={10} className="text-slate-500" />
-                                      <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-white animate-pulse"></div>
-                                  </div>
-                                  <span className="text-[9px] font-bold text-slate-600">{onlineCount}</span>
-                              </div>
-
-                              {/* FIREBASE STATUS INDICATOR */}
-                              {isFirebaseConnected ? (
-                                  <span className="flex items-center gap-1 bg-green-100 text-green-700 text-[9px] px-2 py-0.5 rounded-full font-bold">
-                                      <Wifi size={10} /> Online
-                                  </span>
-                              ) : (
-                                  <span className="flex items-center gap-1 bg-red-100 text-red-700 text-[9px] px-2 py-0.5 rounded-full font-bold animate-pulse">
-                                      <WifiOff size={10} /> Disconnected (Check Config)
-                                  </span>
-                              )}
-                          </div>
-                      </div>
+                      <h2 className="font-black text-slate-800 text-lg leading-none">Admin Console</h2>
                   </div>
-                  <div className="flex gap-2">
+
+                  <div className="flex items-center gap-2">
+                      {/* STRICT BOARD SWITCHER */}
+                      <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+                          <button onClick={() => handleBoardChange('CBSE')} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${adminBoardContext === 'CBSE' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>CBSE</button>
+                          <button onClick={() => handleBoardChange('BSEB')} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${adminBoardContext === 'BSEB' ? 'bg-white shadow text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}>BSEB</button>
+                      </div>
+
+                      {/* ONLINE USERS */}
+                      <div className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200" title="Active Users (5m)">
+                          <div className="relative">
+                              <Users size={10} className="text-slate-500" />
+                              <div className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-green-500 rounded-full border border-white animate-pulse"></div>
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-600">{onlineCount}</span>
+                      </div>
+
+                      {/* FIREBASE STATUS INDICATOR */}
+                      {isFirebaseConnected ? (
+                          <span className="flex items-center gap-1 bg-green-100 text-green-700 text-[9px] px-2 py-0.5 rounded-full font-bold">
+                              <Wifi size={10} /> Online
+                          </span>
+                      ) : (
+                          <span className="flex items-center gap-1 bg-red-100 text-red-700 text-[9px] px-2 py-0.5 rounded-full font-bold animate-pulse">
+                              <WifiOff size={10} /> Disconnected
+                          </span>
+                      )}
+                  </div>
+
+                  <div className="flex w-full md:w-auto gap-2 items-center flex-wrap">
+                      <button
+                          onClick={() => onToggleDarkMode && onToggleDarkMode(!isDarkMode)}
+                          className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-[10px] uppercase tracking-widest font-black transition-all shadow-sm ${isDarkMode ? 'bg-slate-800 text-yellow-400 border border-slate-700' : 'bg-white text-slate-600 border border-slate-200'}`}
+                      >
+                          {isDarkMode ? <Sparkles size={14} /> : <Zap size={14} />}
+                          {isDarkMode ? 'Dark' : 'Light'}
+                      </button>
+
                       <button 
                           onClick={() => {
                               if (confirm("⚠️ FORCE UPDATE ALL APPS?\n\nThis will trigger a reload on all student devices to apply latest changes immediately.")) {
                                   const ts = Date.now().toString();
                                   setLocalSettings({...localSettings, forceRefreshTimestamp: ts});
-                                  // Auto-save to propagate
                                   if (onUpdateSettings) {
                                       const updated = {...localSettings, forceRefreshTimestamp: ts};
                                       onUpdateSettings(updated);
@@ -2677,29 +2709,20 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                                   alert("✅ Update Command Sent!");
                               }
                           }}
-                          className="bg-red-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow hover:bg-red-700 flex items-center gap-2 animate-pulse"
+                          className="flex-1 md:flex-none bg-red-100 text-red-600 border border-red-200 px-4 py-2.5 rounded-xl text-[10px] uppercase tracking-widest font-black hover:bg-red-200 flex items-center justify-center gap-2 transition-colors"
                       >
-                          <RefreshCw size={16} /> Force Update
+                          <RefreshCw size={14} /> Force Update
                       </button>
+
                       <button
                           onClick={() => handleSaveSettings()}
                           disabled={isSettingsSaving}
-                          className={`bg-green-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg hover:bg-green-700 flex items-center gap-2 ${isSettingsSaving ? 'opacity-70 cursor-wait' : ''}`}
+                          className={`flex-1 md:flex-none bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-[10px] uppercase tracking-widest font-black shadow-lg hover:bg-indigo-700 flex items-center justify-center gap-2 transition-colors ${isSettingsSaving ? 'opacity-70 cursor-wait' : ''}`}
                       >
-                          {isSettingsSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                          {isSettingsSaving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                           {isSettingsSaving ? 'Saving...' : 'Save Settings'}
                       </button>
                   </div>
-              </div>
-              
-              <div className="flex justify-end mb-4 px-2">
-                  <button 
-                      onClick={() => onToggleDarkMode && onToggleDarkMode(!isDarkMode)}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${isDarkMode ? 'bg-slate-800 text-yellow-400 border border-slate-700' : 'bg-white text-slate-600 border border-slate-200'}`}
-                  >
-                      {isDarkMode ? <Sparkles size={12} /> : <Zap size={12} />}
-                      {isDarkMode ? 'Dark' : 'Light'}
-                  </button>
               </div>
 
               <FeatureGroupList
@@ -2722,6 +2745,340 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
               <div className="mt-4 flex justify-end">
                   <button onClick={() => onNavigate('STUDENT_DASHBOARD')} className="bg-slate-800 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-900 transition-all shadow-md text-xs">
                       <LogOut size={16} /> Exit
+                  </button>
+              </div>
+          </div>
+      )}
+
+            {/* --- STORE MANAGER TAB --- */}
+      {activeTab === 'STORE_MANAGER' && (
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 animate-in slide-in-from-right">
+              <div className="flex items-center gap-4 mb-6 border-b pb-4">
+                  <button onClick={() => setActiveTab('DASHBOARD')} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><ArrowLeft size={20} /></button>
+                  <h3 className="text-xl font-black text-slate-800">Store Manager</h3>
+              </div>
+
+              {/* STORE EVENTS & POPUPS */}
+              <div className="mb-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Zap size={18} className="text-yellow-500" /> Advanced Store Events & Logic</h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                      {/* Revision Logic Toggle */}
+                      <div className="flex flex-col gap-2 bg-white p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">Revision Engine</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.revisionConfig?.trackWrongAnswers ?? true}
+                                  onChange={e => setLocalSettings({...localSettings, revisionConfig: {...localSettings.revisionConfig, trackWrongAnswers: e.target.checked}})}
+                                  className="w-5 h-5 accent-blue-600"
+                              />
+                          </div>
+                          <p className="text-[10px] text-slate-500 leading-tight">
+                              Enable/Disable Revision Hub tracking globally.
+                          </p>
+                      </div>
+
+                      {/* Credit Free Event Toggle */}
+                      <div className="flex flex-col gap-2 bg-white p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">Credit Free Event</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.isCreditFreeEvent || false}
+                                  onChange={e => setLocalSettings({...localSettings, isCreditFreeEvent: e.target.checked})}
+                                  className="w-5 h-5 accent-blue-600"
+                              />
+                          </div>
+                          {localSettings.isCreditFreeEvent && (
+                              <p className="text-[10px] text-slate-500 leading-tight">
+                                  All content normally requiring credits will be completely free.
+                              </p>
+                          )}
+                      </div>
+
+                      {/* Global Free Access Toggle */}
+                      <div className="flex flex-col gap-2 bg-white p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">Global Free Access</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.isGlobalFreeMode || false}
+                                  onChange={e => setLocalSettings({...localSettings, isGlobalFreeMode: e.target.checked})}
+                                  className="w-5 h-5 accent-blue-600"
+                              />
+                          </div>
+                          {localSettings.isGlobalFreeMode && (
+                              <p className="text-[10px] text-slate-500 leading-tight">
+                                  Overrides all subscriptions. Every user gets Ultra Access.
+                              </p>
+                          )}
+                      </div>
+
+                      {/* Discount Event Toggle */}
+                      <div className="flex flex-col gap-2 bg-white p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-slate-700">Discount Sale Event</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.specialDiscountEvent?.enabled || false}
+                                  onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), enabled: e.target.checked}})}
+                                  className="w-5 h-5 accent-blue-600"
+                              />
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* EVENT DETAILED SETTINGS */}
+                  {localSettings.specialDiscountEvent?.enabled && (
+                      <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-inner mb-4 animate-in fade-in slide-in-from-top-2">
+                          <h5 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><Ticket size={16}/> Discount Event Configuration</h5>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                  <label className="text-[10px] font-bold text-slate-500 block">Event Name</label>
+                                  <input
+                                      type="text"
+                                      value={localSettings.specialDiscountEvent?.eventName || ''}
+                                      onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), eventName: e.target.value}})}
+                                      className="w-full p-2 border rounded text-sm"
+                                      placeholder="e.g. Diwali Mega Sale"
+                                  />
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-slate-500 block">Discount %</label>
+                                  <input
+                                      type="number"
+                                      value={localSettings.specialDiscountEvent?.discountPercent || 0}
+                                      onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), discountPercent: Number(e.target.value)}})}
+                                      className="w-full p-2 border rounded text-sm"
+                                  />
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-slate-500 block">Renewal Bonus % (Extra)</label>
+                                  <input
+                                      type="number"
+                                      value={localSettings.specialDiscountEvent?.renewalDiscountPercent || 0}
+                                      onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), renewalDiscountPercent: Number(e.target.value)}})}
+                                      className="w-full p-2 border rounded text-sm"
+                                  />
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-slate-500 block">Start Date/Time</label>
+                                  <input
+                                      type="datetime-local"
+                                      value={localSettings.specialDiscountEvent?.startsAt ? new Date(localSettings.specialDiscountEvent.startsAt).toISOString().slice(0, 16) : ''}
+                                      onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), startsAt: e.target.value ? new Date(e.target.value).toISOString() : undefined}})}
+                                      className="w-full p-2 border rounded text-sm"
+                                  />
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-slate-500 block">End Date/Time</label>
+                                  <input
+                                      type="datetime-local"
+                                      value={localSettings.specialDiscountEvent?.endsAt ? new Date(localSettings.specialDiscountEvent.endsAt).toISOString().slice(0, 16) : ''}
+                                      onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), endsAt: e.target.value ? new Date(e.target.value).toISOString() : undefined}})}
+                                      className="w-full p-2 border rounded text-sm"
+                                  />
+                              </div>
+                          </div>
+
+                          <div className="flex items-center gap-4 mt-4">
+                               <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                                  <input type="checkbox" checked={localSettings.specialDiscountEvent?.showToFreeUsers ?? true} onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), showToFreeUsers: e.target.checked}})} className="accent-blue-600" /> Show to Free Users
+                               </label>
+                               <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                                  <input type="checkbox" checked={localSettings.specialDiscountEvent?.showToPremiumUsers ?? true} onChange={e => setLocalSettings({...localSettings, specialDiscountEvent: {...(localSettings.specialDiscountEvent || {} as any), showToPremiumUsers: e.target.checked}})} className="accent-blue-600" /> Show to Premium Users
+                               </label>
+                          </div>
+                      </div>
+                  )}
+
+                  {/* POPUP CONFIGURATIONS */}
+                  <h5 className="font-bold text-slate-800 mt-6 mb-3 border-t pt-4">Automatic Popup Triggers</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Expiry Warning Popup */}
+                      <div className="bg-white p-4 rounded-xl border border-slate-200">
+                          <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs font-bold text-red-600 flex items-center gap-1"><AlertOctagon size={14}/> Expiry Warning</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.popupConfigs?.isExpiryWarningEnabled ?? true}
+                                  onChange={e => setLocalSettings({...localSettings, popupConfigs: {...(localSettings.popupConfigs || {} as any), isExpiryWarningEnabled: e.target.checked}})}
+                                  className="w-4 h-4 accent-red-600"
+                              />
+                          </div>
+                          {localSettings.popupConfigs?.isExpiryWarningEnabled !== false && (
+                              <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                      <label className="text-[10px] text-slate-500">Trigger (Hours before)</label>
+                                      <input
+                                          type="number"
+                                          value={localSettings.popupConfigs?.expiryWarningHours ?? 24}
+                                          onChange={e => setLocalSettings({...localSettings, popupConfigs: {...(localSettings.popupConfigs || {} as any), expiryWarningHours: Number(e.target.value)}})}
+                                          className="w-full p-1.5 border rounded text-xs"
+                                      />
+                                  </div>
+                                  <div>
+                                      <label className="text-[10px] text-slate-500">Interval (Minutes)</label>
+                                      <input
+                                          type="number"
+                                          value={localSettings.popupConfigs?.expiryWarningIntervalMinutes ?? 60}
+                                          onChange={e => setLocalSettings({...localSettings, popupConfigs: {...(localSettings.popupConfigs || {} as any), expiryWarningIntervalMinutes: Number(e.target.value)}})}
+                                          className="w-full p-1.5 border rounded text-xs"
+                                      />
+                                  </div>
+                              </div>
+                          )}
+                      </div>
+
+                      {/* Upsell Popup */}
+                      <div className="bg-white p-4 rounded-xl border border-slate-200">
+                          <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs font-bold text-green-600 flex items-center gap-1"><ArrowUpCircle size={14}/> Upsell Promotion</span>
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.popupConfigs?.isUpsellEnabled ?? true}
+                                  onChange={e => setLocalSettings({...localSettings, popupConfigs: {...(localSettings.popupConfigs || {} as any), isUpsellEnabled: e.target.checked}})}
+                                  className="w-4 h-4 accent-green-600"
+                              />
+                          </div>
+                          {localSettings.popupConfigs?.isUpsellEnabled !== false && (
+                              <div>
+                                  <label className="text-[10px] text-slate-500">Show Interval (Minutes)</label>
+                                  <input
+                                      type="number"
+                                      value={localSettings.popupConfigs?.upsellPopupIntervalMinutes ?? 120}
+                                      onChange={e => setLocalSettings({...localSettings, popupConfigs: {...(localSettings.popupConfigs || {} as any), upsellPopupIntervalMinutes: Number(e.target.value)}})}
+                                      className="w-full p-1.5 border rounded text-xs"
+                                  />
+                              </div>
+                          )}
+                      </div>
+                  </div>
+              </div>
+
+              {/* NEW SUBSCRIPTION PLAN EDITOR (Full Control) */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 overflow-hidden">
+                  <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-bold text-slate-800 flex items-center gap-2"><Crown size={18} className="text-yellow-500" /> Subscription Plans (Store View)</h4>
+                      <button
+                          onClick={() => {
+                              const newPlan = {
+                                  id: `plan-${Date.now()}`,
+                                  name: 'New Plan',
+                                  duration: '30 days',
+                                  basicPrice: 99,
+                                  basicOriginalPrice: 199,
+                                  ultraPrice: 149,
+                                  ultraOriginalPrice: 299,
+                                  features: ['New Feature'],
+                                  popular: false
+                              };
+                              setLocalSettings({...localSettings, subscriptionPlans: [...(localSettings.subscriptionPlans || []), newPlan]});
+                          }}
+                          className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors flex items-center gap-1"
+                      >
+                          <Plus size={14} /> Add Plan
+                      </button>
+                  </div>
+                  <div className="space-y-4">
+                      {(localSettings.subscriptionPlans || []).map((plan, idx) => {
+                          const updatePlan = (field: string, value: any) => {
+                              const newPlans = [...localSettings.subscriptionPlans!];
+                              newPlans[idx] = { ...newPlans[idx], [field]: value };
+                              setLocalSettings({...localSettings, subscriptionPlans: newPlans});
+                          };
+
+                          return (
+                              <div key={plan.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative group transition-all hover:border-blue-200">
+                                  <button
+                                      onClick={() => {
+                                          if(confirm("Delete this plan?")) {
+                                              const newPlans = localSettings.subscriptionPlans!.filter(p => p.id !== plan.id);
+                                              setLocalSettings({...localSettings, subscriptionPlans: newPlans});
+                                          }
+                                      }}
+                                      className="absolute top-4 right-4 text-red-400 hover:text-red-600 bg-red-50 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                      <Trash2 size={16} />
+                                  </button>
+
+                                  <div className="grid grid-cols-2 gap-4 mb-4 pr-10">
+                                      <div>
+                                          <label className="text-[10px] font-bold text-slate-500 uppercase">Plan Name</label>
+                                          <input type="text" value={plan.name} onChange={e => updatePlan('name', e.target.value)} className="w-full p-2 border rounded font-bold" placeholder="e.g. Monthly" />
+                                      </div>
+                                      <div>
+                                          <label className="text-[10px] font-bold text-slate-500 uppercase">Duration Label</label>
+                                          <input type="text" value={plan.duration} onChange={e => updatePlan('duration', e.target.value)} className="w-full p-2 border rounded font-medium text-slate-600" placeholder="e.g. 30 days" />
+                                      </div>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-4">
+                                      {/* BASIC TIER CONFIG */}
+                                      <div className="bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                                          <h5 className="text-xs font-black text-blue-800 mb-2 flex items-center justify-between">BASIC (PRO) TIER</h5>
+                                          <div className="flex gap-2">
+                                              <div className="flex-1">
+                                                  <label className="text-[9px] font-bold text-slate-500 block">Dummy Price (₹)</label>
+                                                  <input type="number" value={plan.basicOriginalPrice} onChange={e => updatePlan('basicOriginalPrice', Number(e.target.value))} className="w-full p-1.5 border rounded text-xs line-through text-slate-400" />
+                                              </div>
+                                              <div className="flex-1">
+                                                  <label className="text-[9px] font-bold text-blue-600 block">Selling Price (₹)</label>
+                                                  <input type="number" value={plan.basicPrice} onChange={e => updatePlan('basicPrice', Number(e.target.value))} className="w-full p-1.5 border border-blue-300 rounded text-xs font-bold text-blue-700 bg-blue-50" />
+                                              </div>
+                                          </div>
+                                      </div>
+
+                                      {/* ULTRA TIER CONFIG */}
+                                      <div className="bg-purple-50/50 p-3 rounded-xl border border-purple-100">
+                                          <h5 className="text-xs font-black text-purple-800 mb-2 flex items-center justify-between">ULTRA (MAX) TIER</h5>
+                                          <div className="flex gap-2">
+                                              <div className="flex-1">
+                                                  <label className="text-[9px] font-bold text-slate-500 block">Dummy Price (₹)</label>
+                                                  <input type="number" value={plan.ultraOriginalPrice} onChange={e => updatePlan('ultraOriginalPrice', Number(e.target.value))} className="w-full p-1.5 border rounded text-xs line-through text-slate-400" />
+                                              </div>
+                                              <div className="flex-1">
+                                                  <label className="text-[9px] font-bold text-purple-600 block">Selling Price (₹)</label>
+                                                  <input type="number" value={plan.ultraPrice} onChange={e => updatePlan('ultraPrice', Number(e.target.value))} className="w-full p-1.5 border border-purple-300 rounded text-xs font-bold text-purple-700 bg-purple-50" />
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                              </div>
+                          );
+                      })}
+                  </div>
+              </div>
+
+              {/* STORE FEATURE LIST (Moved from General Settings) */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4">
+                  <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><List size={18} /> Store Display Features</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                      <div>
+                          <label className="text-xs font-bold text-blue-600 uppercase mb-2 block">Basic Plan Features</label>
+                          <textarea
+                              value={(localSettings.storeFeatures?.basic || DEFAULT_BASIC_FEATURES).join('\n')}
+                              onChange={e => setLocalSettings({...localSettings, storeFeatures: {...(localSettings.storeFeatures || {basic:[], ultra:[]}), basic: e.target.value.split('\n')}})}
+                              className="w-full h-32 p-2 border border-blue-200 rounded-lg text-xs"
+                              placeholder="One per line"
+                          />
+                      </div>
+                      <div>
+                          <label className="text-xs font-bold text-purple-600 uppercase mb-2 block">Ultra Plan Features</label>
+                          <textarea
+                              value={(localSettings.storeFeatures?.ultra || DEFAULT_ULTRA_FEATURES).join('\n')}
+                              onChange={e => setLocalSettings({...localSettings, storeFeatures: {...(localSettings.storeFeatures || {basic:[], ultra:[]}), ultra: e.target.value.split('\n')}})}
+                              className="w-full h-32 p-2 border border-purple-200 rounded-lg text-xs"
+                              placeholder="One per line"
+                          />
+                      </div>
+                  </div>
+              </div>
+
+              <div className="mt-8 flex justify-end">
+                  <button onClick={() => handleSaveSettings()} className="bg-green-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-green-700 flex items-center gap-2">
+                      <Save size={18} /> Save Store Config
                   </button>
               </div>
           </div>
@@ -2808,190 +3165,126 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                             </div>
                         </div>
 
-                      {/* --- REVISION LOGIC CONFIGURATION --- */}
-                      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 mt-4">
-                          <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><BrainCircuit size={18} className="text-purple-500" /> Revision Engine Config</h3>
-
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div>
-                              <label className="text-xs font-bold text-slate-500 uppercase">Strong Topic (Min %)</label>
-                              <input
-                                  type="number"
-                                  value={localSettings.revisionConfig?.thresholds.strong ?? 80}
-                                  onChange={(e) => setLocalSettings({
-                                      ...localSettings,
-                                      revisionConfig: {
-                                          ...localSettings.revisionConfig!,
-                                          thresholds: {
-                                              ...localSettings.revisionConfig?.thresholds!,
-                                              strong: parseInt(e.target.value) || 0
-                                          }
-                                      } as any
-                                  })}
-                                  className="w-full p-2 border rounded-lg font-bold"
-                              />
-                              <p className="text-[10px] text-slate-400 mt-1">Scores above this are "Strong"</p>
-                          </div>
-                          <div>
-                              <label className="text-xs font-bold text-slate-500 uppercase">Average Topic (Min %)</label>
-                              <input
-                                  type="number"
-                                  value={localSettings.revisionConfig?.thresholds.average ?? 50}
-                                  onChange={(e) => setLocalSettings({
-                                      ...localSettings,
-                                      revisionConfig: {
-                                          ...localSettings.revisionConfig!,
-                                          thresholds: {
-                                              ...localSettings.revisionConfig?.thresholds!,
-                                              average: parseInt(e.target.value) || 0
-                                          }
-                                      } as any
-                                  })}
-                                  className="w-full p-2 border rounded-lg font-bold"
-                              />
-                              <p className="text-[10px] text-slate-400 mt-1">Scores between this and Strong are "Average"</p>
-                          </div>
-                          <div>
-                              <label className="text-xs font-bold text-slate-500 uppercase">Mastery Score (Min %)</label>
-                              <input
-                                  type="number"
-                                  value={localSettings.revisionConfig?.thresholds.mastery ?? 80}
-                                  onChange={(e) => setLocalSettings({
-                                      ...localSettings,
-                                      revisionConfig: {
-                                          ...localSettings.revisionConfig!,
-                                          thresholds: {
-                                              ...localSettings.revisionConfig?.thresholds!,
-                                              mastery: parseInt(e.target.value) || 0
-                                          }
-                                      } as any
-                                  })}
-                                  className="w-full p-2 border rounded-lg font-bold"
-                              />
-                              <p className="text-[10px] text-slate-400 mt-1">Score needed to count towards Mastery</p>
-                          </div>
-                          <div>
-                              <label className="text-xs font-bold text-slate-500 uppercase">Mastery Count</label>
-                              <input
-                                  type="number"
-                                  value={localSettings.revisionConfig?.mastery.requiredCount ?? 2}
-                                  onChange={(e) => setLocalSettings({
-                                      ...localSettings,
-                                      revisionConfig: {
-                                          ...localSettings.revisionConfig!,
-                                          mastery: {
-                                              requiredCount: parseInt(e.target.value) || 1
-                                          }
-                                      } as any
-                                  })}
-                                  className="w-full p-2 border rounded-lg font-bold"
-                              />
-                              <p className="text-[10px] text-slate-400 mt-1">How many times user must score high to Master a topic</p>
-                          </div>
-                      </div>
                   </div>
-                  </div>
+              </div>
 
-                  {/* TIME INTERVALS */}
-                  <div className="space-y-6">
-                      {['weak', 'average', 'strong', 'mastered'].map(status => {
-                          // Helper to get seconds safely
-                          const getSeconds = (type: 'revision' | 'mcq') => {
-                              // @ts-ignore
-                              return localSettings.revisionConfig?.intervals?.[status]?.[type] || 0;
-                          };
-
-                          // Helper to update seconds
-                          const updateSeconds = (type: 'revision' | 'mcq', totalSeconds: number) => {
-                               const newIntervals = {
-                                   weak: { revision: 86400, mcq: 259200 },
-                                   average: { revision: 259200, mcq: 432000 },
-                                   strong: { revision: 604800, mcq: 864000 },
-                                   mastered: { revision: 2592000, mcq: 864000 },
-                                   ...(localSettings.revisionConfig?.intervals || {})
-                               };
-                               // @ts-ignore
-                               newIntervals[status] = {
-                                   // @ts-ignore
-                                   ...newIntervals[status],
-                                   [type]: totalSeconds
-                               };
-
-                               setLocalSettings({
-                                   ...localSettings,
-                                   revisionConfig: {
-                                       thresholds: localSettings.revisionConfig?.thresholds || { strong: 80, average: 50, mastery: 80 },
-                                       mastery: localSettings.revisionConfig?.mastery || { requiredCount: 2 },
-                                       intervals: newIntervals
-                                   }
-                               });
-                          };
-
-                          const renderTimeInput = (label: string, type: 'revision' | 'mcq', color: string) => {
-                              const totalSeconds = getSeconds(type);
-                              const d = Math.floor(totalSeconds / (24 * 3600));
-                              const h = Math.floor((totalSeconds % (24 * 3600)) / 3600);
-                              const m = Math.floor((totalSeconds % 3600) / 60);
-
-                              const handleChange = (field: 'd' | 'h' | 'm', val: number) => {
-                                  let newD = d, newH = h, newM = m;
-                                  if (field === 'd') newD = val;
-                                  if (field === 'h') newH = val;
-                                  if (field === 'm') newM = val;
-                                  updateSeconds(type, (newD * 24 * 3600) + (newH * 3600) + (newM * 60));
+              {/* CUSTOM ADMIN POPUPS (New Requirement) */}
+              <div className="mt-8 border-t border-slate-200 pt-8">
+                  <div className="flex justify-between items-center mb-6">
+                      <h4 className="font-black text-slate-800 text-lg flex items-center gap-2">
+                          <MessageSquare size={20} className="text-blue-600" /> Custom Admin Popups
+                      </h4>
+                      <button
+                          onClick={() => {
+                              const newPopup = {
+                                  enabled: false,
+                                  title: 'New Announcement',
+                                  message: 'Type your message here...',
+                                  type: 'INFO' as const,
+                                  showTo: 'ALL' as const
                               };
+                              setLocalSettings({
+                                  ...localSettings,
+                                  adminCustomPopups: [...(localSettings.adminCustomPopups || []), newPopup]
+                              });
+                          }}
+                          className="bg-slate-900 text-white px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2"
+                      >
+                          <Plus size={14} /> Create Popup
+                      </button>
+                  </div>
 
-                              return (
-                                  <div className={`bg-white p-3 rounded-xl border border-${color}-200 shadow-sm`}>
-                                      <label className={`text-[10px] font-bold text-${color}-600 uppercase mb-2 block`}>{label}</label>
-                                      <div className="flex gap-2">
-                                          <div className="flex-1">
-                                              <input
-                                                  type="number"
-                                                  value={d}
-                                                  onChange={e => handleChange('d', Math.max(0, parseInt(e.target.value) || 0))}
-                                                  className="w-full p-2 text-center border rounded-lg font-bold text-sm bg-slate-50 focus:bg-white transition-colors"
-                                                  placeholder="D"
-                                              />
-                                              <p className="text-[9px] text-center text-slate-400 mt-1 uppercase font-bold">Days</p>
-                                          </div>
-                                          <div className="flex-1">
-                                              <input
-                                                  type="number"
-                                                  value={h}
-                                                  onChange={e => handleChange('h', Math.max(0, parseInt(e.target.value) || 0))}
-                                                  className="w-full p-2 text-center border rounded-lg font-bold text-sm bg-slate-50 focus:bg-white transition-colors"
-                                                  placeholder="H"
-                                              />
-                                              <p className="text-[9px] text-center text-slate-400 mt-1 uppercase font-bold">Hours</p>
-                                          </div>
-                                          <div className="flex-1">
-                                              <input
-                                                  type="number"
-                                                  value={m}
-                                                  onChange={e => handleChange('m', Math.max(0, parseInt(e.target.value) || 0))}
-                                                  className="w-full p-2 text-center border rounded-lg font-bold text-sm bg-slate-50 focus:bg-white transition-colors"
-                                                  placeholder="M"
-                                              />
-                                              <p className="text-[9px] text-center text-slate-400 mt-1 uppercase font-bold">Mins</p>
-                                          </div>
-                                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(localSettings.adminCustomPopups || []).map((popup, idx) => (
+                          <div key={idx} className={`p-4 rounded-xl border-2 transition-all ${popup.enabled ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-slate-50'}`}>
+                              <div className="flex justify-between items-start mb-4">
+                                  <div className="flex items-center gap-3">
+                                      <input
+                                          type="checkbox"
+                                          checked={popup.enabled}
+                                          onChange={(e) => {
+                                              const newPopups = [...localSettings.adminCustomPopups!];
+                                              newPopups[idx].enabled = e.target.checked;
+                                              setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                          }}
+                                          className="w-5 h-5 accent-blue-600"
+                                      />
+                                      <select
+                                          value={popup.type}
+                                          onChange={(e) => {
+                                              const newPopups = [...localSettings.adminCustomPopups!];
+                                              newPopups[idx].type = e.target.value as any;
+                                              setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                          }}
+                                          className="bg-white border rounded p-1 text-xs font-bold"
+                                      >
+                                          <option value="INFO">Info</option>
+                                          <option value="DISCOUNT">Discount Event</option>
+                                          <option value="FREE_CREDIT">Free Credits</option>
+                                          <option value="FREE_ACCESS">Free Access</option>
+                                          <option value="SUBSCRIPTION">Subscription Promos</option>
+                                      </select>
                                   </div>
-                              );
-                          };
+                                  <button onClick={() => {
+                                      const newPopups = localSettings.adminCustomPopups!.filter((_, i) => i !== idx);
+                                      setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                  }} className="text-red-400 hover:text-red-600">
+                                      <Trash2 size={16} />
+                                  </button>
+                              </div>
 
-                          return (
-                              <div key={status} className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                  <h5 className="font-bold text-slate-700 uppercase text-xs mb-3 bg-white px-2 py-1 rounded inline-block shadow-sm">
-                                      {status} Topic Intervals
-                                  </h5>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                      {renderTimeInput("Notes Revision Due After", "revision", "blue")}
-                                      {renderTimeInput("MCQ Practice Due After", "mcq", "purple")}
+                              <div className="space-y-3">
+                                  <input
+                                      type="text"
+                                      value={popup.title}
+                                      onChange={(e) => {
+                                          const newPopups = [...localSettings.adminCustomPopups!];
+                                          newPopups[idx].title = e.target.value;
+                                          setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                      }}
+                                      className="w-full p-2 border rounded font-bold text-sm"
+                                      placeholder="Popup Title"
+                                  />
+                                  <textarea
+                                      value={popup.message}
+                                      onChange={(e) => {
+                                          const newPopups = [...localSettings.adminCustomPopups!];
+                                          newPopups[idx].message = e.target.value;
+                                          setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                      }}
+                                      className="w-full p-2 border rounded text-xs min-h-[60px]"
+                                      placeholder="Popup Message..."
+                                  />
+
+                                  <div className="grid grid-cols-2 gap-2">
+                                      <input
+                                          type="text"
+                                          value={popup.copyableText || ''}
+                                          onChange={(e) => {
+                                              const newPopups = [...localSettings.adminCustomPopups!];
+                                              newPopups[idx].copyableText = e.target.value;
+                                              setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                          }}
+                                          className="w-full p-2 border rounded text-xs bg-slate-100 font-mono"
+                                          placeholder="Copyable Code (Optional)"
+                                      />
+                                      <select
+                                          value={popup.showTo}
+                                          onChange={(e) => {
+                                              const newPopups = [...localSettings.adminCustomPopups!];
+                                              newPopups[idx].showTo = e.target.value as any;
+                                              setLocalSettings({...localSettings, adminCustomPopups: newPopups});
+                                          }}
+                                          className="w-full p-2 border rounded text-xs font-bold"
+                                      >
+                                          <option value="ALL">Show to All</option>
+                                          <option value="FREE">Free Users Only</option>
+                                          <option value="PREMIUM">Premium Users Only</option>
+                                      </select>
                                   </div>
                               </div>
-                          );
-                      })}
+                          </div>
+                      ))}
                   </div>
               </div>
           </div>
@@ -3788,6 +4081,41 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                           />
                       </div>
                   </div>
+
+                  {/* --- LOGIN REWARD SETTINGS --- */}
+                  <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200 mt-4">
+                      <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2"><Zap size={18} className="text-blue-500" /> Daily Login Bonus Settings</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                          <div>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase">Free User Bonus</label>
+                              <input type="number" value={localSettings.loginBonusConfig?.freeBonus ?? 2} onChange={e => {
+                                  setLocalSettings(prev => ({
+                                      ...prev,
+                                      loginBonusConfig: { ...(prev.loginBonusConfig || { freeBonus: 2, basicBonus: 5, ultraBonus: 10, strictStreak: false }), freeBonus: Number(e.target.value) }
+                                  }));
+                              }} className="w-full p-2 border rounded-lg mt-1 text-sm bg-white font-bold" />
+                          </div>
+                          <div>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase">Basic User Bonus</label>
+                              <input type="number" value={localSettings.loginBonusConfig?.basicBonus ?? 5} onChange={e => {
+                                  setLocalSettings(prev => ({
+                                      ...prev,
+                                      loginBonusConfig: { ...(prev.loginBonusConfig || { freeBonus: 2, basicBonus: 5, ultraBonus: 10, strictStreak: false }), basicBonus: Number(e.target.value) }
+                                  }));
+                              }} className="w-full p-2 border rounded-lg mt-1 text-sm bg-white font-bold text-blue-600" />
+                          </div>
+                          <div>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase">Ultra User Bonus</label>
+                              <input type="number" value={localSettings.loginBonusConfig?.ultraBonus ?? 10} onChange={e => {
+                                  setLocalSettings(prev => ({
+                                      ...prev,
+                                      loginBonusConfig: { ...(prev.loginBonusConfig || { freeBonus: 2, basicBonus: 5, ultraBonus: 10, strictStreak: false }), ultraBonus: Number(e.target.value) }
+                                  }));
+                              }} className="w-full p-2 border rounded-lg mt-1 text-sm bg-white font-bold text-purple-600" />
+                          </div>
+                      </div>
+                  </div>
+
               </div>
 
               <button onClick={() => handleSaveSettings()} className="w-full mt-6 bg-green-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-green-700 flex items-center justify-center gap-2">
@@ -6812,7 +7140,10 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                                       <div key={pkg.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
                                           <div>
                                               <p className="font-bold text-sm text-slate-800">{pkg.name}</p>
-                                              <p className="text-xs text-slate-500">₹{pkg.price} = {pkg.credits} Credits</p>
+                                              <div className="text-xs text-slate-500">
+    <span className="line-through text-slate-400 mr-2">{pkg.dummyPrice ? `₹${pkg.dummyPrice}` : ''}</span>
+    <span className="font-bold text-green-600">₹{pkg.price}</span> = {pkg.credits} Credits
+</div>
                                           </div>
                                           <button onClick={() => removePackage(pkg.id)} className="text-red-400 hover:text-red-600 p-2"><Trash2 size={16} /></button>
                                       </div>
@@ -7590,48 +7921,14 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
 
       {/* --- AI NOTES MANAGER TAB --- */}
 
-      {/* --- DEPLOYMENT TAB (New) --- */}
+
+      {/* --- DEPLOYMENT / APP UPDATE TAB (Restored without junk) --- */}
       {activeTab === 'DEPLOY' && (
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 animate-in slide-in-from-right">
               <div className="flex items-center gap-4 mb-6">
                   <button onClick={() => setActiveTab('DASHBOARD')} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><ArrowLeft size={20} /></button>
-                  <h3 className="text-xl font-black text-slate-800">Deployment & Blueprint</h3>
+                  <h3 className="text-xl font-black text-slate-800">App Update Configuration</h3>
               </div>
-
-                  <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 mb-4">
-                      <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-bold text-emerald-800">Credit Free Event</h4>
-                          <button
-                              onClick={() => setLocalSettings({...localSettings, creditFreeEvent: { enabled: !localSettings.creditFreeEvent?.enabled }})}
-                              className={`px-3 py-1 rounded-full text-xs font-bold ${localSettings.creditFreeEvent?.enabled ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'}`}
-                          >
-                              {localSettings.creditFreeEvent?.enabled ? 'ACTIVE' : 'DISABLED'}
-                          </button>
-                      </div>
-                      <p className="text-xs text-emerald-700">When active, all credit costs become 0.</p>
-                  </div>
-
-                  {/* FREE ACCESS MANAGER */}
-                  <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-200 mb-4">
-                      <h4 className="font-bold text-indigo-800 mb-2">Free Access Manager</h4>
-                      <div className="space-y-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase">Valid Until</label>
-                          <input
-                              type="datetime-local"
-                              value={localSettings.freeAccessConfig?.validUntil || ''}
-                              onChange={e => setLocalSettings({...localSettings, freeAccessConfig: { ...localSettings.freeAccessConfig, validUntil: e.target.value, classes: localSettings.freeAccessConfig?.classes || [] }})}
-                              className="w-full p-2 border rounded-lg"
-                          />
-                          <label className="text-xs font-bold text-slate-500 uppercase">Classes (Comma separated)</label>
-                          <input
-                              type="text"
-                              placeholder="e.g. 10, 12, COMPETITION"
-                              value={localSettings.freeAccessConfig?.classes?.join(', ') || ''}
-                              onChange={e => setLocalSettings({...localSettings, freeAccessConfig: { ...localSettings.freeAccessConfig, validUntil: localSettings.freeAccessConfig?.validUntil || '', classes: e.target.value.split(',').map(s => s.trim()) }})}
-                              className="w-full p-2 border rounded-lg"
-                          />
-                      </div>
-                  </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* APP UPDATE CONFIGURATION */}
@@ -7647,9 +7944,9 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                       <div className="space-y-3">
                           <div>
                               <label className="text-[10px] font-bold text-green-700 uppercase">Version Code</label>
-                              <input 
-                                  type="text" 
-                                  value={localSettings.latestVersion || ''} 
+                              <input
+                                  type="text"
+                                  value={localSettings.latestVersion || ''}
                                   onChange={e => setLocalSettings({...localSettings, latestVersion: e.target.value})}
                                   placeholder="e.g. 1.2.5"
                                   className="w-full p-2 rounded-lg border border-green-200 text-sm font-bold"
@@ -7657,9 +7954,9 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                           </div>
                           <div>
                               <label className="text-[10px] font-bold text-green-700 uppercase">Official App Share Link</label>
-                              <input 
-                                  type="text" 
-                                  value={localSettings.officialAppUrl || ''} 
+                              <input
+                                  type="text"
+                                  value={localSettings.officialAppUrl || ''}
                                   onChange={e => setLocalSettings({...localSettings, officialAppUrl: e.target.value})}
                                   placeholder="https://play.google.com/..."
                                   className="w-full p-2 rounded-lg border border-green-200 text-sm"
@@ -7668,9 +7965,9 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                           </div>
                           <div>
                               <label className="text-[10px] font-bold text-green-700 uppercase">Update Link (Play Store)</label>
-                              <input 
-                                  type="text" 
-                                  value={localSettings.updateUrl || ''} 
+                              <input
+                                  type="text"
+                                  value={localSettings.updateUrl || ''}
                                   onChange={e => setLocalSettings({...localSettings, updateUrl: e.target.value})}
                                   placeholder="https://..."
                                   className="w-full p-2 rounded-lg border border-green-200 text-sm"
@@ -7678,9 +7975,9 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                           </div>
                           <div>
                               <label className="text-[10px] font-bold text-green-700 uppercase">Launch Date</label>
-                              <input 
-                                  type="datetime-local" 
-                                  value={localSettings.launchDate || ''} 
+                              <input
+                                  type="datetime-local"
+                                  value={localSettings.launchDate || ''}
                                   onChange={e => setLocalSettings({...localSettings, launchDate: e.target.value})}
                                   className="w-full p-2 rounded-lg border border-green-200 text-sm"
                               />
@@ -7690,14 +7987,14 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                               <label className="text-[10px] font-bold text-green-700 uppercase mb-2 block">Grace Period (Lock App After)</label>
                               <div className="grid grid-cols-4 gap-2">
                                   <div>
-                                      <input 
-                                          type="number" 
-                                          value={localSettings.updateGracePeriod?.days || 0} 
+                                      <input
+                                          type="number"
+                                          value={localSettings.updateGracePeriod?.days || 0}
                                           onChange={e => {
                                               const val = Math.max(0, parseInt(e.target.value) || 0);
-                                              const newGrace = { 
+                                              const newGrace = {
                                                   ...(localSettings.updateGracePeriod || { days: 0, hours: 0, minutes: 0, seconds: 0 }),
-                                                  days: val 
+                                                  days: val
                                               };
                                               setLocalSettings({...localSettings, updateGracePeriod: newGrace});
                                           }}
@@ -7708,14 +8005,14 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                                       <p className="text-[9px] text-green-600 text-center mt-1 uppercase">days</p>
                                   </div>
                                   <div>
-                                      <input 
-                                          type="number" 
-                                          value={localSettings.updateGracePeriod?.hours || 0} 
+                                      <input
+                                          type="number"
+                                          value={localSettings.updateGracePeriod?.hours || 0}
                                           onChange={e => {
                                               const val = Math.max(0, parseInt(e.target.value) || 0);
-                                              const newGrace = { 
+                                              const newGrace = {
                                                   ...(localSettings.updateGracePeriod || { days: 0, hours: 0, minutes: 0, seconds: 0 }),
-                                                  hours: val 
+                                                  hours: val
                                               };
                                               setLocalSettings({...localSettings, updateGracePeriod: newGrace});
                                           }}
@@ -7726,14 +8023,14 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                                       <p className="text-[9px] text-green-600 text-center mt-1 uppercase">hours</p>
                                   </div>
                                   <div>
-                                      <input 
-                                          type="number" 
-                                          value={localSettings.updateGracePeriod?.minutes || 0} 
+                                      <input
+                                          type="number"
+                                          value={localSettings.updateGracePeriod?.minutes || 0}
                                           onChange={e => {
                                               const val = Math.max(0, parseInt(e.target.value) || 0);
-                                              const newGrace = { 
+                                              const newGrace = {
                                                   ...(localSettings.updateGracePeriod || { days: 0, hours: 0, minutes: 0, seconds: 0 }),
-                                                  minutes: val 
+                                                  minutes: val
                                               };
                                               setLocalSettings({...localSettings, updateGracePeriod: newGrace});
                                           }}
@@ -7744,14 +8041,14 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                                       <p className="text-[9px] text-green-600 text-center mt-1 uppercase">minutes</p>
                                   </div>
                                   <div>
-                                      <input 
-                                          type="number" 
-                                          value={localSettings.updateGracePeriod?.seconds || 0} 
+                                      <input
+                                          type="number"
+                                          value={localSettings.updateGracePeriod?.seconds || 0}
                                           onChange={e => {
                                               const val = Math.max(0, parseInt(e.target.value) || 0);
-                                              const newGrace = { 
+                                              const newGrace = {
                                                   ...(localSettings.updateGracePeriod || { days: 0, hours: 0, minutes: 0, seconds: 0 }),
-                                                  seconds: val 
+                                                  seconds: val
                                               };
                                               setLocalSettings({...localSettings, updateGracePeriod: newGrace});
                                           }}
@@ -7768,15 +8065,15 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                           <div className="bg-white p-3 rounded-xl border border-green-200">
                               <label className="text-[10px] font-bold text-green-700 uppercase mb-2 block">Popup Frequency (Show Every)</label>
                               <div className="flex gap-2">
-                                  <input 
-                                      type="number" 
-                                      value={localSettings.updatePopupFrequency?.value || 0} 
+                                  <input
+                                      type="number"
+                                      value={localSettings.updatePopupFrequency?.value || 0}
                                       onChange={e => {
                                           const val = Math.max(0, parseInt(e.target.value) || 0);
-                                          const newFreq = { 
-                                              unit: 'hours', 
+                                          const newFreq = {
+                                              unit: 'hours',
                                               ...(localSettings.updatePopupFrequency || {}),
-                                              value: val 
+                                              value: val
                                           };
                                           // @ts-ignore
                                           setLocalSettings({...localSettings, updatePopupFrequency: newFreq});
@@ -7788,10 +8085,10 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                                   <select
                                       value={localSettings.updatePopupFrequency?.unit || 'hours'}
                                       onChange={e => {
-                                          const newFreq = { 
-                                              value: 0, 
+                                          const newFreq = {
+                                              value: 0,
                                               ...(localSettings.updatePopupFrequency || {}),
-                                              unit: e.target.value 
+                                              unit: e.target.value
                                           };
                                           // @ts-ignore
                                           setLocalSettings({...localSettings, updatePopupFrequency: newFreq});
@@ -7807,97 +8104,49 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
 
                           <div>
                               <label className="text-[10px] font-bold text-green-700 uppercase">Auto-Close Duration (Sec)</label>
-                              <input 
-                                  type="number" 
-                                  value={localSettings.updatePopupDurationSeconds || 0} 
+                              <input
+                                  type="number"
+                                  value={localSettings.updatePopupDurationSeconds || 0}
                                   onChange={e => setLocalSettings({...localSettings, updatePopupDurationSeconds: parseInt(e.target.value)})}
                                   className="w-full p-2 rounded-lg border border-green-200 text-sm"
                                   min="0"
                               />
                               <p className="text-[9px] text-green-600 mt-1">0 = Stays until closed.</p>
                           </div>
-                          <button onClick={() => handleSaveSettings()} className="w-full bg-green-600 text-white font-bold py-2 rounded-lg shadow mt-2 hover:bg-green-700">
-                              Save Update Config
-                          </button>
+                          <label className="flex items-center gap-2 cursor-pointer mt-4 p-2 bg-white rounded-lg border border-green-100">
+                              <input
+                                  type="checkbox"
+                                  checked={localSettings.forceUpdate}
+                                  onChange={e => setLocalSettings({...localSettings, forceUpdate: e.target.checked})}
+                                  className="w-5 h-5 accent-green-600"
+                              />
+                              <span className="text-sm font-bold text-slate-700">Require Force Update</span>
+                          </label>
                       </div>
                   </div>
 
-                  {/* CONTENT UNLOCK CODE GENERATOR */}
-                  <div className="bg-purple-50 p-6 rounded-3xl border border-purple-100">
-                      <div className="w-12 h-12 bg-purple-600 text-white rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-purple-200">
-                          <Key size={24} />
-                      </div>
-                      <h4 className="text-xl font-black text-purple-900 mb-2">Content Unlock Code</h4>
-                      <p className="text-sm text-purple-700 leading-relaxed mb-6">
-                          Generate a redeem code to unlock a specific Chapter/Topic for a student.
-                      </p>
-
-                      <button
-                          onClick={() => {
-                              const code = prompt("Enter Code Prefix (e.g. TOPIC):", "TOPIC");
-                              const contentId = prompt("Enter Chapter/Content ID:");
-
-                              if (code && contentId) {
-                                  const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-                                  const finalCode = `${code}-${randomPart}`;
-
-                                  const newGiftCode: GiftCode = {
-                                      id: Date.now().toString(),
-                                      code: finalCode,
-                                      type: 'CONTENT_UNLOCK',
-                                      contentId: contentId,
-                                      contentType: 'LESSON',
-                                      createdAt: new Date().toISOString(),
-                                      isRedeemed: false,
-                                      generatedBy: 'ADMIN',
-                                      maxUses: 1,
-                                      usedCount: 0,
-                                      redeemedBy: []
-                                  };
-
-                                  set(ref(rtdb, `redeem_codes/${finalCode}`), newGiftCode).then(() => {
-                                      alert(`Code Generated: ${finalCode}`);
-                                  });
-                              }
-                          }}
-                          className="w-full bg-purple-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-purple-700 shadow-md"
-                      >
-                          Generate Unlock Code
-                      </button>
-                  </div>
-
-                  {/* APP BLUEPRINT */}
-                  <div className="bg-blue-50 p-6 rounded-3xl border border-blue-100 flex flex-col justify-between">
-                      <div>
-                          <div className="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-blue-200">
-                              <Code2 size={24} />
-                          </div>
-                          <h4 className="text-xl font-black text-blue-900 mb-2">Download Live Update</h4>
-                          <p className="text-sm text-blue-700 leading-relaxed mb-6">
-                              This will generate a <strong>New ZIP</strong> containing your latest Admin Changes.
-                              <br/><br/>
-                              Upload this to your hosting provider, and students will receive the update automatically next time they open the app.
-                          </p>
-                      </div>
-                  </div>
-
-                  {/* DEPLOYMENT GUIDE */}
-                  <div className="bg-slate-900 p-6 rounded-3xl border border-slate-700 text-white flex flex-col justify-between">
-                      <div>
-                          <div className="w-12 h-12 bg-slate-800 text-white rounded-xl flex items-center justify-center mb-4 border border-slate-700">
-                              <Rocket size={24} />
-                          </div>
-                          <h4 className="text-xl font-black text-white mb-2">How to Update?</h4>
-                          <ul className="text-sm text-slate-400 space-y-3 mb-6 list-decimal pl-4">
-                              <li>Make changes in Admin Panel (Add Chapters/Notices).</li>
-                              <li>Click <strong>Download Source</strong> on left.</li>
-                              <li>Upload the new ZIP to your host.</li>
-                              <li>Done! All students get updated data instantly.</li>
+                  <div className="space-y-6">
+                      <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
+                          <h4 className="font-bold text-slate-800 flex items-center gap-2 mb-4"><Monitor size={18} /> Update Mechanics</h4>
+                          <ul className="text-xs text-slate-600 space-y-3">
+                              <li className="flex items-start gap-2">
+                                  <CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" />
+                                  <span><b>Version Match:</b> If a user's app version doesn't match the one set here, they see an update notice.</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                  <CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" />
+                                  <span><b>Grace Period:</b> The countdown begins exactly on the 'Launch Date'.</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                  <CheckCircle size={14} className="text-green-500 mt-0.5 shrink-0" />
+                                  <span><b>Force Update:</b> If checked OR if grace period expires, the app is locked until updated.</span>
+                              </li>
                           </ul>
                       </div>
-                      <div className="text-[10px] bg-slate-800 p-3 rounded-xl border border-slate-700 text-slate-400 text-center">
-                          <span className="font-bold text-green-400">SYNC ACTIVE:</span> V3.1 Auto-Sync Enabled.
-                      </div>
+
+                      <button onClick={() => handleSaveSettings()} className="w-full px-6 py-4 bg-green-600 text-white font-bold rounded-2xl shadow-xl hover:bg-green-700 flex items-center justify-center gap-2 text-lg">
+                          <Save size={24} /> Deploy Update
+                      </button>
                   </div>
               </div>
           </div>
@@ -8213,6 +8462,7 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                               <option value="CREDITS">Credits (Coins)</option>
                               <option value="SUBSCRIPTION">Subscription</option>
                               <option value="DISCOUNT">Discount Coupon</option>
+                              <option value="CONTENT_UNLOCK">Content Unlock</option>
                           </select>
                       </div>
 
@@ -8226,7 +8476,7 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                               <label className="text-xs font-bold text-pink-700 uppercase block mb-1">Discount %</label>
                               <input type="number" value={newCodeDiscount} onChange={e => setNewCodeDiscount(Number(e.target.value))} className="p-3 rounded-xl border border-pink-200 w-32 font-bold" min="1" max="100" />
                           </div>
-                      ) : (
+                      ) : newCodeType === 'SUBSCRIPTION' ? (
                           <>
                               <div>
                                   <label className="text-xs font-bold text-pink-700 uppercase block mb-1">Plan Duration</label>
@@ -8246,6 +8496,42 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                                   </select>
                               </div>
                           </>
+                      ) : (
+                          <div className="flex gap-2">
+                                <div>
+                                  <label className="text-xs font-bold text-pink-700 uppercase block mb-1">Type</label>
+                                  <select value={newCodeContentType} onChange={e => setNewCodeContentType(e.target.value as any)} className="p-3 rounded-xl border border-pink-200 bg-white font-bold">
+                                      <option value="VIDEO">Video</option>
+                                      <option value="PDF">Notes</option>
+                                      <option value="MCQ">MCQ</option>
+                                      <option value="AUDIO">Audio</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-xs font-bold text-pink-700 uppercase block mb-1">Subject</label>
+                                  <select value={newCodeContentSubject} onChange={e => {
+                                      setNewCodeContentSubject(e.target.value);
+                                      const s = getSubjectsList(newCodeContentClass, 'Science', newCodeContentBoard).find(sub => sub.name === e.target.value);
+                                      if (s) {
+                                          fetchChapters(newCodeContentBoard, newCodeContentClass, 'Science', s, 'English').then(ch => setNewCodeContentChaptersList(ch));
+                                      }
+                                  }} className="p-3 rounded-xl border border-pink-200 bg-white font-bold w-32 truncate">
+                                      <option value="">Select</option>
+                                      {getSubjectsList(newCodeContentClass, 'Science', newCodeContentBoard).map(s => (
+                                          <option key={s.id} value={s.name}>{s.name}</option>
+                                      ))}
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-xs font-bold text-pink-700 uppercase block mb-1">Chapter</label>
+                                  <select value={newCodeContentChapter} onChange={e => setNewCodeContentChapter(e.target.value)} className="p-3 rounded-xl border border-pink-200 bg-white font-bold w-48 truncate">
+                                      <option value="">Select Chapter</option>
+                                      {newCodeContentChaptersList.map(ch => (
+                                          <option key={ch.id} value={ch.id}>{ch.title}</option>
+                                      ))}
+                                  </select>
+                                </div>
+                          </div>
                       )}
 
                       <div>
@@ -8278,7 +8564,9 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                                   <td className="p-3 font-bold text-pink-600">
                                       {code.type === 'SUBSCRIPTION' 
                                           ? `${code.subTier} ${code.subLevel}` 
-                                          : code.type === 'DISCOUNT' ? `${code.discountPercent}% OFF` : `${code.amount} CR`}
+                                          : code.type === 'DISCOUNT' ? `${code.discountPercent}% OFF`
+                                          : code.type === 'CONTENT_UNLOCK' ? `${code.contentType} (${code.contentId})`
+                                          : `${code.amount} CR`}
                                   </td>
                                   <td className="p-3">
                                       <div className="flex flex-col gap-1">
@@ -9659,30 +9947,6 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
           </div>
       )}
 
-      {/* --- FEATURE ACCESS PAGE --- */}
-      {activeTab === 'FEATURE_ACCESS' && (
-          <FeatureAccessPage
-              settings={localSettings}
-              onUpdateSettings={(s) => {
-                  setLocalSettings(s);
-                  handleSaveSettings(s);
-              }}
-              onBack={() => setActiveTab('DASHBOARD')}
-          />
-      )}
-
-      {/* --- NSTA FEATURE MANAGER (Formerly APP SOUL) --- */}
-      {activeTab === 'NSTA_CONTROL' && (
-          <NstaFeatureManager
-              settings={localSettings}
-              onUpdateSettings={(s) => {
-                  setLocalSettings(s);
-                  handleSaveSettings(s);
-              }}
-              onBack={() => setActiveTab('DASHBOARD')}
-          />
-      )}
-
       {/* --- DOCUMENTATION TAB --- */}
       {activeTab === 'DOCUMENTATION' && (
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
@@ -9694,177 +9958,90 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
           </div>
       )}
 
-      {/* --- VISIBILITY CONTROL (Legacy Restored) --- */}
+      {activeTab === 'NSTA_CONTROL' && (
+          <NstaFeatureManager settings={localSettings} onUpdateSettings={setLocalSettings} onBack={() => setActiveTab('DASHBOARD')} />
+      )}
+
+            {/* --- VISIBILITY CONTROL (Legacy Restored) --- */}
       {activeTab === 'CONFIG_VISIBILITY' && (
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 animate-in slide-in-from-right">
               <div className="flex items-center gap-4 mb-6 border-b pb-4">
                   <button onClick={() => setActiveTab('DASHBOARD')} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><ArrowLeft size={20} /></button>
-                  <h3 className="text-xl font-black text-slate-800">Content Visibility Control</h3>
+                  <h3 className="text-xl font-black text-slate-800">Student Dashboard Visibility</h3>
               </div>
 
-              {/* WATERMARK CONTROLS (Moved to Top) */}
-              <div className="mb-8 p-6 bg-slate-50 rounded-2xl border border-slate-200">
-                  <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                      <Eye size={20} /> Watermark Settings (Global)
-                  </h4>
+              <div className="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <h4 className="font-bold text-slate-800 mb-2">Configure Tier Visibility</h4>
+                  <p className="text-xs text-slate-500 mb-4">Select which tiers can see and access specific sections of the app.</p>
 
-                  {/* LIVE PREVIEW BOX */}
-                  <div className="mb-6 p-4 border border-slate-300 rounded-xl bg-white relative h-32 overflow-hidden flex items-center justify-center">
-                      <p className="z-10 font-bold text-slate-800 relative">Live Preview (Content Layer)</p>
-                      {/* PREVIEW LAYER */}
-                      <img
-                          src={localSettings.appLogo || ''}
-                          alt="Watermark Preview"
-                          style={{
-                              width: `${localSettings.watermarkSize || 150}px`,
-                              height: 'auto',
-                              opacity: localSettings.watermarkOpacity || 0.05,
-                              position: 'absolute',
-                              top: localSettings.watermarkPosition?.top || '50%',
-                              left: localSettings.watermarkPosition?.left || '50%',
-                              transform: `translate(-50%, -50%) rotate(${localSettings.watermarkAngle || -10}deg)`,
-                              filter: 'grayscale(100%)',
-                              pointerEvents: 'none'
-                          }}
-                      />
+                  <div className="space-y-4">
+                      {ALL_FEATURES.filter(f => !f.adminVisible).map(feature => {
+                          const config = localSettings.featureConfig?.[feature.id] || { visible: true, allowedTiers: ['FREE', 'BASIC', 'ULTRA'] };
+                          const isAllowed = (tier: string) => config.allowedTiers.includes(tier);
+
+                          return (
+                              <div key={feature.id} className="flex flex-col md:flex-row md:items-center justify-between bg-white p-3 rounded-lg border border-slate-200 shadow-sm gap-4">
+                                  <div className="flex items-center gap-2">
+                                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                                          <Eye size={14} />
+                                      </div>
+                                      <div>
+                                          <p className="font-bold text-sm text-slate-800">{feature.label}</p>
+                                          <p className="text-[10px] text-slate-400 font-mono">{feature.id}</p>
+                                      </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                                      <button
+                                          onClick={() => {
+                                              const newTiers = isAllowed('FREE') ? config.allowedTiers.filter(t => t !== 'FREE') : [...config.allowedTiers, 'FREE'];
+                                              setLocalSettings({
+                                                  ...localSettings,
+                                                  featureConfig: {
+                                                      ...localSettings.featureConfig,
+                                                      [feature.id]: { ...config, allowedTiers: newTiers }
+                                                  }
+                                              });
+                                          }}
+                                          className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${isAllowed('FREE') ? 'bg-green-100 text-green-700' : 'bg-white text-slate-400'}`}
+                                      >
+                                          FREE
+                                      </button>
+                                      <button
+                                          onClick={() => {
+                                              const newTiers = isAllowed('BASIC') ? config.allowedTiers.filter(t => t !== 'BASIC') : [...config.allowedTiers, 'BASIC'];
+                                              setLocalSettings({
+                                                  ...localSettings,
+                                                  featureConfig: {
+                                                      ...localSettings.featureConfig,
+                                                      [feature.id]: { ...config, allowedTiers: newTiers }
+                                                  }
+                                              });
+                                          }}
+                                          className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${isAllowed('BASIC') ? 'bg-blue-100 text-blue-700' : 'bg-white text-slate-400'}`}
+                                      >
+                                          BASIC
+                                      </button>
+                                      <button
+                                          onClick={() => {
+                                              const newTiers = isAllowed('ULTRA') ? config.allowedTiers.filter(t => t !== 'ULTRA') : [...config.allowedTiers, 'ULTRA'];
+                                              setLocalSettings({
+                                                  ...localSettings,
+                                                  featureConfig: {
+                                                      ...localSettings.featureConfig,
+                                                      [feature.id]: { ...config, allowedTiers: newTiers }
+                                                  }
+                                              });
+                                          }}
+                                          className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${isAllowed('ULTRA') ? 'bg-purple-100 text-purple-700' : 'bg-white text-slate-400'}`}
+                                      >
+                                          ULTRA
+                                      </button>
+                                  </div>
+                              </div>
+                          );
+                      })}
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                          <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Watermark Opacity ({localSettings.watermarkOpacity || 0.05})</label>
-                          <input
-                              type="range"
-                              min="0"
-                              max="1"
-                              step="0.01"
-                              value={localSettings.watermarkOpacity !== undefined ? localSettings.watermarkOpacity : 0.05}
-                              onChange={(e) => setLocalSettings({...localSettings, watermarkOpacity: parseFloat(e.target.value)})}
-                              className="w-full accent-blue-600"
-                          />
-                          <p className="text-[10px] text-slate-400 mt-1">Controls how transparent the background logo appears.</p>
-                      </div>
-                      <div>
-                          <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Watermark Size ({localSettings.watermarkSize || 150}px)</label>
-                          <input
-                              type="range"
-                              min="50"
-                              max="1000"
-                              step="10"
-                              value={localSettings.watermarkSize !== undefined ? localSettings.watermarkSize : 150}
-                              onChange={(e) => setLocalSettings({...localSettings, watermarkSize: parseInt(e.target.value)})}
-                              className="w-full accent-blue-600"
-                          />
-                          <p className="text-[10px] text-slate-400 mt-1">Controls the size of the single background logo.</p>
-                      </div>
-
-                      <div>
-                          <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Watermark Angle ({localSettings.watermarkAngle || -10}°)</label>
-                          <input
-                              type="range"
-                              min="-180"
-                              max="180"
-                              step="5"
-                              value={localSettings.watermarkAngle !== undefined ? localSettings.watermarkAngle : -10}
-                              onChange={(e) => setLocalSettings({...localSettings, watermarkAngle: parseInt(e.target.value)})}
-                              className="w-full accent-purple-600"
-                          />
-                          <p className="text-[10px] text-slate-400 mt-1">Controls the rotation angle of the logo.</p>
-                      </div>
-
-                      {/* WATERMARK POSITION CONTROLS */}
-                      <div className="col-span-1 md:col-span-2">
-                          <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Watermark Position</label>
-                          <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                  <label className="text-[10px] font-bold text-slate-400">Vertical (Top %)</label>
-                                  <input
-                                      type="range"
-                                      min="0"
-                                      max="100"
-                                      value={parseInt(localSettings.watermarkPosition?.top || '50')}
-                                      onChange={(e) => setLocalSettings({
-                                          ...localSettings,
-                                          watermarkPosition: {
-                                              ...(localSettings.watermarkPosition || { left: '50%' }),
-                                              top: `${e.target.value}%`
-                                          }
-                                      })}
-                                      className="w-full accent-blue-600"
-                                  />
-                              </div>
-                              <div>
-                                  <label className="text-[10px] font-bold text-slate-400">Horizontal (Left %)</label>
-                                  <input
-                                      type="range"
-                                      min="0"
-                                      max="100"
-                                      value={parseInt(localSettings.watermarkPosition?.left || '50')}
-                                      onChange={(e) => setLocalSettings({
-                                          ...localSettings,
-                                          watermarkPosition: {
-                                              ...(localSettings.watermarkPosition || { top: '50%' }),
-                                              left: `${e.target.value}%`
-                                          }
-                                      })}
-                                      className="w-full accent-blue-600"
-                                  />
-                              </div>
-                          </div>
-                      </div>
-
-                      <div>
-                           <label className="flex items-center gap-2 cursor-pointer p-3 bg-white border border-slate-200 rounded-lg">
-                               <input
-                                  type="checkbox"
-                                  checked={localSettings.showUserWatermark !== false}
-                                  onChange={(e) => setLocalSettings({...localSettings, showUserWatermark: e.target.checked})}
-                                  className="w-4 h-4 accent-blue-600"
-                               />
-                               <span className="text-xs font-bold text-slate-700">Show User Name Overlay</span>
-                           </label>
-                           <p className="text-[10px] text-slate-400 mt-1 px-1">Displays "Name • ID" as a faint overlay for security.</p>
-                      </div>
-
-                      <div>
-                           <label className="flex items-center gap-2 cursor-pointer p-3 bg-white border border-slate-200 rounded-lg">
-                               <input
-                                  type="checkbox"
-                                  checked={localSettings.isWatermarkEnabled !== false}
-                                  onChange={(e) => setLocalSettings({...localSettings, isWatermarkEnabled: e.target.checked})}
-                                  className="w-4 h-4 accent-red-600"
-                               />
-                               <span className="text-xs font-bold text-red-700">Enable Global Watermark</span>
-                           </label>
-                           <p className="text-[10px] text-slate-400 mt-1 px-1">Master Toggle: Turn off to hide watermark everywhere.</p>
-                      </div>
-                  </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {['VIDEO', 'PDF', 'MCQ', 'AUDIO'].map((type) => {
-                      const isVisible = localSettings.contentVisibility?.[type as keyof typeof localSettings.contentVisibility] !== false;
-                      return (
-                          <div key={type} className={`p-6 rounded-2xl border-2 transition-all ${isVisible ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                              <div className="flex justify-between items-center mb-4">
-                                  <h4 className={`font-black text-lg ${isVisible ? 'text-green-800' : 'text-red-800'}`}>{type} Section</h4>
-                                  <button
-                                      onClick={() => {
-                                          const newVisibility = { ...localSettings.contentVisibility, [type]: !isVisible };
-                                          setLocalSettings({ ...localSettings, contentVisibility: newVisibility });
-                                      }}
-                                      className={`px-4 py-2 rounded-lg font-bold text-xs shadow-lg transition-transform active:scale-95 ${isVisible ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-red-600 text-white hover:bg-red-700'}`}
-                                  >
-                                      {isVisible ? 'VISIBLE' : 'HIDDEN'}
-                                  </button>
-                              </div>
-                              <p className="text-xs text-slate-500 font-medium">
-                                  {isVisible
-                                      ? `Students can access ${type} content normally.`
-                                      : `The ${type} section is completely hidden from the student dashboard.`}
-                              </p>
-                          </div>
-                      );
-                  })}
               </div>
 
               <div className="mt-8 flex justify-end">
@@ -9879,8 +10056,6 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
               </div>
           </div>
       )}
-
-
     </div>
   );
 };

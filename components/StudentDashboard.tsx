@@ -17,7 +17,7 @@ import { LessonActionModal } from './LessonActionModal';
 import { RedeemSection } from './RedeemSection';
 import { PrizeList } from './PrizeList';
 import { Store } from './Store';
-import { Globe, Layout, Gift, Sparkles, Megaphone, Lock, BookOpen, AlertCircle, Edit, Settings, Play, Pause, RotateCcw, MessageCircle, Gamepad2, Timer, CreditCard, Send, CheckCircle, Mail, X, Ban, Smartphone, Trophy, ShoppingBag, ArrowRight, Video, Youtube, Home, User as UserIcon, Book, BookOpenText, List, BarChart3, Award, Bell, Headphones, LifeBuoy, WifiOff, Zap, Star, Crown, History, ListChecks, Rocket, Ticket, TrendingUp, BrainCircuit, FileText, CheckSquare, Menu, LayoutGrid, Compass, User as UserIconOutline, MessageSquare, Bot, HelpCircle, Database, Activity, Download, Calendar } from 'lucide-react';
+import { Globe, Layout, Gift, Sparkles, Megaphone, Lock, BookOpen, AlertCircle, Edit, Settings, Play, Pause, RotateCcw, MessageCircle, Gamepad2, Timer, CreditCard, Send, CheckCircle, Mail, X, Ban, Smartphone, Trophy, ShoppingBag, ArrowRight, Video, Youtube, Home, User as UserIcon, Book, BookOpenText, List, BarChart3, Award, Bell, Headphones, LifeBuoy, WifiOff, Zap, Star, Crown, History, ListChecks, Rocket, Ticket, TrendingUp, BrainCircuit, FileText, CheckSquare, Menu, LayoutGrid, Compass, User as UserIconOutline, MessageSquare, Bot, HelpCircle, Database, Activity, Download, Calendar, LogOut } from 'lucide-react';
 import { SubjectSelection } from './SubjectSelection';
 import { BannerCarousel } from './BannerCarousel';
 import { ChapterSelection } from './ChapterSelection'; // Imported for Video Flow
@@ -148,39 +148,119 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
       }
   }, [user.isPremium, user.subscriptionEndDate]);
 
-  // --- POPUP LOGIC (EXPIRY WARNING & UPSELL) ---
+  // --- POPUP LOGIC (EXPIRY WARNING, UPSELL, AND EVENT) ---
   useEffect(() => {
       const checkPopups = () => {
           const now = Date.now();
+
+          // 1. Expiry Warning
           if (settings?.popupConfigs?.isExpiryWarningEnabled && user.isPremium && user.subscriptionEndDate) {
              const end = new Date(user.subscriptionEndDate).getTime();
              const diffHours = (end - now) / (1000 * 60 * 60);
-             const threshold = settings.popupConfigs.expiryWarningHours || 48;
+             const threshold = settings.popupConfigs.expiryWarningHours || 24;
              if (diffHours > 0 && diffHours <= threshold) {
                  const lastShown = parseInt(localStorage.getItem(`last_expiry_warn_${user.id}`) || '0');
                  const interval = (settings.popupConfigs.expiryWarningIntervalMinutes || 60) * 60 * 1000;
                  if (now - lastShown > interval) {
-                     showAlert(`⚠️ Your subscription expires in ${Math.ceil(diffHours)} hours! Renew now to keep access.`, "INFO", "Expiry Warning");
+                     showAlert(`⚠️ Your subscription expires in ${Math.ceil(diffHours)} hours! Renew now to keep uninterrupted access.`, "INFO", "Expiry Warning");
                      localStorage.setItem(`last_expiry_warn_${user.id}`, now.toString());
+                     return; // Show one at a time
                  }
              }
           }
+
+          // 2. Upsell Promotion
           if (settings?.popupConfigs?.isUpsellEnabled && user.subscriptionLevel !== 'ULTRA') {
              const lastShown = parseInt(localStorage.getItem(`last_upsell_${user.id}`) || '0');
              const interval = (settings.popupConfigs.upsellPopupIntervalMinutes || 120) * 60 * 1000;
              if (now - lastShown > interval) {
                  const isFree = !user.isPremium;
                  const msg = isFree
-                     ? "🚀 Unlock full power! Upgrade to Basic or Ultra for more features."
-                     : "💎 Go Ultra! Get unlimited access to Competition Mode and AI.";
+                     ? "🚀 Upgrade to Premium to unlock Full Subject Notes, Ad-Free Videos, and AI tools!"
+                     : "💎 Go Ultra! Get unlimited access to Competition Mode, Deep Dive Notes, and AI Chat.";
                  showAlert(msg, "INFO", "Upgrade Available");
                  localStorage.setItem(`last_upsell_${user.id}`, now.toString());
+                 return; // Show one at a time
              }
           }
+
+          // 3. Discount Event Notification
+          if (settings?.specialDiscountEvent?.enabled) {
+              const event = settings.specialDiscountEvent;
+              let isEventActive = false;
+              if (event.startsAt && event.endsAt) {
+                  isEventActive = now >= new Date(event.startsAt).getTime() && now < new Date(event.endsAt).getTime();
+              }
+
+              if (isEventActive) {
+                  const isSubscribed = user.isPremium && user.subscriptionEndDate && new Date(user.subscriptionEndDate) > new Date(now);
+                  const shouldShow = (isSubscribed && event.showToPremiumUsers) || (!isSubscribed && event.showToFreeUsers);
+
+                  if (shouldShow) {
+                      const lastShown = parseInt(localStorage.getItem(`last_event_promo_${user.id}_${event.eventName}`) || '0');
+                      // Show every 2 hours if not specified differently, just to ensure they know about the sale
+                      const interval = 2 * 60 * 60 * 1000;
+                      if (now - lastShown > interval) {
+                          showAlert(`🎉 ${event.eventName} is LIVE! Get ${event.discountPercent}% OFF on subscriptions right now!`, "SUCCESS", "Special Event");
+                          localStorage.setItem(`last_event_promo_${user.id}_${event.eventName}`, now.toString());
+                          return;
+                      }
+                  }
+              }
+          }
+
+          // 4. Global Free Access & Credit Free Event Popups
+          if (settings?.isGlobalFreeMode) {
+              const lastShown = parseInt(localStorage.getItem(`last_global_free_${user.id}`) || '0');
+              const interval = 4 * 60 * 60 * 1000; // Every 4 hours
+              if (now - lastShown > interval) {
+                  showAlert("🌟 GLOBAL FREE ACCESS IS LIVE! Enjoy everything for free!", "SUCCESS", "Special Event");
+                  localStorage.setItem(`last_global_free_${user.id}`, now.toString());
+                  return;
+              }
+          }
+
+          if (settings?.creditFreeEvent?.enabled) {
+              const lastShown = parseInt(localStorage.getItem(`last_credit_free_${user.id}`) || '0');
+              const interval = 4 * 60 * 60 * 1000; // Every 4 hours
+              if (now - lastShown > interval) {
+                  showAlert("⚡ CREDIT FREE EVENT IS LIVE! Unlock content without using your coins!", "SUCCESS", "Special Event");
+                  localStorage.setItem(`last_credit_free_${user.id}`, now.toString());
+                  return;
+              }
+          }
+
+          // 5. Admin Custom Popups
+          if (settings?.adminCustomPopups) {
+              for (const popup of settings.adminCustomPopups) {
+                  if (popup.enabled) {
+                      // Check audience
+                      if (popup.showTo === 'FREE' && user.isPremium) continue;
+                      if (popup.showTo === 'PREMIUM' && !user.isPremium) continue;
+
+                      const popupId = `custom_popup_${popup.title.replace(/\s+/g, '_')}`;
+                      const lastShown = parseInt(localStorage.getItem(`${popupId}_${user.id}`) || '0');
+                      const interval = 4 * 60 * 60 * 1000; // 4 hours by default for custom popups
+
+                      if (now - lastShown > interval) {
+                          let popupMsg = popup.message;
+                          if (popup.copyableText) {
+                              popupMsg += `\n\nCode: ${popup.copyableText}`;
+                          }
+                          showAlert(popupMsg, "INFO", popup.title);
+                          localStorage.setItem(`${popupId}_${user.id}`, now.toString());
+                          return; // Show one at a time
+                      }
+                  }
+              }
+          }
+
       };
-      const timer = setInterval(checkPopups, 60000);
+
+      checkPopups(); // Check immediately on mount/update
+      const timer = setInterval(checkPopups, 60000); // And every minute
       return () => clearInterval(timer);
-  }, [user.isPremium, user.subscriptionEndDate, settings?.popupConfigs]);
+  }, [user.isPremium, user.subscriptionEndDate, settings?.popupConfigs, settings?.specialDiscountEvent]);
 
   // CUSTOM ALERT STATE
   const [alertConfig, setAlertConfig] = useState<{isOpen: boolean, type: 'SUCCESS'|'ERROR'|'INFO', title?: string, message: string}>({isOpen: false, type: 'INFO', message: ''});
@@ -242,6 +322,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
       board: user.board || 'CBSE',
       stream: user.stream || 'Science',
       newPassword: '',
+      mobile: user.mobile || '',
       dailyGoalHours: 3
   });
   const [canClaimReward, setCanClaimReward] = useState(false);
@@ -266,7 +347,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
     if (activeTab === 'HOME' || activeTab === 'EXPLORE' || activeTab === 'PROFILE' || (activeTab as any) === 'AI_STUDIO' || activeTab === 'REVISION') {
         setFullScreen(true);
     } else {
-        if (activeTab !== 'VIDEO' && activeTab !== 'PDF' && activeTab !== 'MCQ' && activeTab !== 'AUDIO') {
+        if (activeTab !== 'VIDEO' && activeTab !== 'PDF' && activeTab !== 'MCQ' && (activeTab as any) !== 'AUDIO') {
              setFullScreen(false);
         }
     }
@@ -452,6 +533,16 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
           const currentPriority = tierPriority[user.subscriptionTier || 'FREE'] || 0;
           const newPriority = tierPriority[tier] || 0;
 
+              // Force to FREE if subscription ended
+              if (cloudData.isPremium && cloudData.subscriptionEndDate && cloudData.subscriptionTier !== 'LIFETIME') {
+                  if (new Date(cloudData.subscriptionEndDate) < new Date()) {
+                      cloudData.isPremium = false;
+                      cloudData.subscriptionTier = 'FREE';
+                      cloudData.subscriptionLevel = undefined;
+                      needsUpdate = true;
+                  }
+              }
+
           if (isActive && currentPriority > newPriority) {
                // User already has a BETTER active plan, do NOT override tier, just extend date if not lifetime
                if (user.subscriptionTier !== 'LIFETIME') {
@@ -506,6 +597,15 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
             const currentUser = userRef.current;
             const needsUpdate = cloudData.credits !== currentUser.credits || cloudData.subscriptionTier !== currentUser.subscriptionTier || cloudData.isPremium !== currentUser.isPremium || cloudData.isGameBanned !== currentUser.isGameBanned || (cloudData.mcqHistory?.length || 0) > (currentUser.mcqHistory?.length || 0);
             if (needsUpdate) {
+                  // Handle expired subscriptions dynamically
+                  if (cloudData.isPremium && cloudData.subscriptionEndDate && cloudData.subscriptionTier !== 'LIFETIME') {
+                      if (new Date(cloudData.subscriptionEndDate) < new Date()) {
+                          cloudData.isPremium = false;
+                          cloudData.subscriptionTier = 'FREE';
+                          cloudData.subscriptionLevel = undefined;
+                      }
+                  }
+
                 let protectedSub = { tier: cloudData.subscriptionTier, level: cloudData.subscriptionLevel, endDate: cloudData.subscriptionEndDate, isPremium: cloudData.isPremium };
                 const localTier = currentUser.subscriptionTier || 'FREE';
                 const cloudTier = cloudData.subscriptionTier || 'FREE';
@@ -603,12 +703,12 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
       });
   };
 
-  const handleLessonOption = (type: 'VIDEO' | 'PDF' | 'MCQ' | 'AUDIO') => {
+  const handleLessonOption = (type: 'VIDEO' | 'PDF' | 'MCQ' | 'AUDIO' | any) => {
       if (!selectedLessonForModal) return;
       setShowLessonModal(false);
 
       // Update Tab and State for Player
-      onTabChange(type);
+      onTabChange(type as any);
       setSelectedChapter(selectedLessonForModal);
       setContentViewStep('PLAYER');
       setFullScreen(true);
@@ -683,51 +783,82 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
 
   // --- MENU ITEM GENERATOR WITH LOCKS ---
   const renderSidebarMenuItems = () => {
-      const items = [
-          { id: 'INBOX', label: 'Inbox', icon: Mail, color: 'indigo', action: () => { setShowInbox(true); setShowSidebar(false); } },
-          { id: 'UPDATES', label: 'Notifications', icon: Bell, color: 'red', action: () => { onTabChange('UPDATES'); setHasNewUpdate(false); localStorage.setItem('nst_last_read_update', Date.now().toString()); setShowSidebar(false); } },
-          { id: 'ANALYTICS', label: 'Analytics', icon: BarChart3, color: 'blue', action: () => { onTabChange('ANALYTICS'); setShowSidebar(false); } },
-          { id: 'MARKSHEET', label: 'Marksheet', icon: FileText, color: 'green', action: () => { setShowMonthlyReport(true); setShowSidebar(false); } },
-          { id: 'HISTORY', label: 'History', icon: History, color: 'slate', action: () => { onTabChange('HISTORY'); setShowSidebar(false); } },
-          { id: 'PLAN', label: 'My Plan', icon: CreditCard, color: 'purple', action: () => { onTabChange('SUB_HISTORY'); setShowSidebar(false); } },
-          ...(isGameEnabled ? [{ id: 'GAME', label: 'Play Game', icon: Gamepad2, color: 'orange', action: () => { onTabChange('GAME'); setShowSidebar(false); }, featureId: 'GAMES' }] : []),
-          { id: 'REDEEM', label: 'Redeem', icon: Gift, color: 'pink', action: () => { onTabChange('REDEEM'); setShowSidebar(false); } },
-          { id: 'PRIZES', label: 'Prizes', icon: Trophy, color: 'yellow', action: () => { onTabChange('PRIZES'); setShowSidebar(false); } },
-          { id: 'REQUEST', label: 'Request Content', icon: Megaphone, color: 'purple', action: () => { setShowRequestModal(true); setShowSidebar(false); }, featureId: 'REQUEST_CONTENT' },
-          { id: 'GUIDE', label: 'App Guide', icon: HelpCircle, color: 'cyan', action: () => { setShowStudentGuide(true); setShowSidebar(false); } }, // NEW
-          { id: 'SUPPORT', label: 'Admin Support', icon: MessageSquare, color: 'rose', action: handleSupportEmail },
+      const groupedItems = [
+          {
+              category: 'Essential',
+              items: [
+                  { id: 'INBOX', label: 'Inbox', icon: Mail, color: 'indigo', action: () => { setShowInbox(true); setShowSidebar(false); } },
+                  { id: 'UPDATES', label: 'Notifications', icon: Bell, color: 'red', action: () => { onTabChange('UPDATES'); setHasNewUpdate(false); localStorage.setItem('nst_last_read_update', Date.now().toString()); setShowSidebar(false); } },
+              ]
+          },
+          {
+              category: 'Learning & Progress',
+              items: [
+                  { id: 'ANALYTICS', label: 'Analytics', icon: BarChart3, color: 'blue', action: () => { onTabChange('ANALYTICS'); setShowSidebar(false); } },
+                  { id: 'MARKSHEET', label: 'Marksheet', icon: FileText, color: 'green', action: () => { setShowMonthlyReport(true); setShowSidebar(false); } },
+                  { id: 'HISTORY', label: 'History', icon: History, color: 'slate', action: () => { onTabChange('HISTORY'); setShowSidebar(false); } },
+              ]
+          },
+          {
+              category: 'Premium & Rewards',
+              items: [
+                  { id: 'PLAN', label: 'My Plan', icon: CreditCard, color: 'purple', action: () => { onTabChange('SUB_HISTORY' as any); setShowSidebar(false); } },
+                  { id: 'REDEEM', label: 'Redeem', icon: Gift, color: 'pink', action: () => { onTabChange('REDEEM'); setShowSidebar(false); } },
+                  { id: 'PRIZES', label: 'Prizes', icon: Trophy, color: 'yellow', action: () => { onTabChange('PRIZES'); setShowSidebar(false); } },
+              ]
+          },
+          {
+              category: 'Fun & Utilities',
+              items: [
+                  ...(isGameEnabled ? [{ id: 'GAME', label: 'Play Game', icon: Gamepad2, color: 'orange', action: () => { onTabChange('GAME'); setShowSidebar(false); }, featureId: 'GAMES' }] : []),
+                  { id: 'REQUEST', label: 'Request Content', icon: Megaphone, color: 'purple', action: () => { setShowRequestModal(true); setShowSidebar(false); }, featureId: 'REQUEST_CONTENT' },
+              ]
+          },
+          {
+              category: 'Help & Support',
+              items: [
+                  { id: 'GUIDE', label: 'App Guide', icon: HelpCircle, color: 'cyan', action: () => { setShowStudentGuide(true); setShowSidebar(false); } },
+                  { id: 'SUPPORT', label: 'Admin Support', icon: MessageSquare, color: 'rose', action: handleSupportEmail },
+              ]
+          }
       ];
 
-      return items.map(item => {
-          // Check Feature Access if ID linked
-          let isLocked = false;
-          if (item.featureId) {
-              const access = checkFeatureAccess(item.featureId, user, settings || {});
-              if (!access.hasAccess) isLocked = true;
-          }
-
-          return (
-              <Button
-                  key={item.id}
-                  onClick={() => {
-                      if (isLocked) {
-                          showAlert("🔒 Locked by Admin. Upgrade your plan to access.", 'ERROR');
-                          return;
+      return groupedItems.map((group, gIdx) => (
+          <div key={gIdx} className="mb-4">
+              <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 mb-2">{group.category}</h4>
+              <div className="space-y-1">
+                  {group.items.map(item => {
+                      let isLocked = false;
+                      if (item.featureId) {
+                          const access = checkFeatureAccess(item.featureId, user, settings || {});
+                          if (!access.hasAccess) isLocked = true;
                       }
-                      item.action();
-                  }}
-                  variant="ghost"
-                  fullWidth
-                  className={`justify-start gap-4 p-4 hover:bg-slate-50 ${isLocked ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
-              >
-                  <div className={`bg-${item.color}-100 text-${item.color}-600 p-2 rounded-lg relative`}>
-                      <item.icon size={20} />
-                      {isLocked && <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5 border border-white"><Lock size={8} className="text-white"/></div>}
-                  </div>
-                  {item.label}
-              </Button>
-          );
-      });
+
+                      return (
+                          <Button
+                              key={item.id}
+                              onClick={() => {
+                                  if (isLocked) {
+                                      showAlert("🔒 Locked by Admin. Upgrade your plan to access.", 'ERROR');
+                                      return;
+                                  }
+                                  item.action();
+                              }}
+                              variant="ghost"
+                              fullWidth
+                              className={`justify-start gap-4 p-3 mx-2 hover:bg-slate-50 rounded-xl ${isLocked ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                          >
+                              <div className={`bg-${item.color}-100 text-${item.color}-600 p-2 rounded-lg relative`}>
+                                  <item.icon size={18} />
+                                  {isLocked && <div className="absolute -top-1 -right-1 bg-red-500 rounded-full p-0.5 border border-white"><Lock size={8} className="text-white"/></div>}
+                              </div>
+                              <span className="text-sm font-bold text-slate-700">{item.label}</span>
+                          </Button>
+                      );
+                  })}
+              </div>
+          </div>
+      ));
   };
 
   // --- RENDER BASED ON ACTIVE TAB ---
@@ -751,41 +882,43 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
                             </div>
                         </button>
                         <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-col justify-center">
                                 <h2 className="text-lg font-black text-slate-800 leading-none">
                                     {settings?.appName || 'Student App'}
                                 </h2>
-                                <button
-                                    onClick={() => {
-                                        const newBoard = user.board === 'CBSE' ? 'BSEB' : 'CBSE';
-                                        handleUserUpdate({ ...user, board: newBoard });
-                                        showAlert(`Language switched to ${newBoard === 'CBSE' ? 'English' : 'Hindi'}`, 'SUCCESS');
-                                    }}
-                                    className="ml-2 flex items-center gap-1 bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg text-[9px] font-black border border-indigo-100 hover:bg-indigo-100 transition-colors"
-                                >
-                                    <Globe size={12} /> {user.board === 'CBSE' ? 'EN' : 'HI'}
-                                </button>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] font-black text-blue-600 truncate max-w-[100px]">{user.name}</span>
-                                {user.role === 'ADMIN' && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[9px] font-bold">ADMIN</span>}
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[10px] font-black text-blue-600 truncate max-w-[100px]">{user.name}</span>
+                                    {user.role === 'ADMIN' && <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-[9px] font-bold">ADMIN</span>}
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
+                        {/* Language Toggle moved to corner */}
+                        <button
+                            onClick={() => {
+                                const newBoard = user.board === 'CBSE' ? 'BSEB' : 'CBSE';
+                                handleUserUpdate({ ...user, board: newBoard });
+                                showAlert(`Language switched to ${newBoard === 'CBSE' ? 'English' : 'Hindi'}`, 'SUCCESS');
+                            }}
+                            className="flex items-center gap-1 bg-indigo-50 text-indigo-600 px-2 py-1.5 rounded-lg text-[9px] font-black border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                        >
+                            <Globe size={12} /> {user.board === 'CBSE' ? 'EN' : 'HI'}
+                        </button>
+
                         {settings?.specialDiscountEvent?.enabled && (
                             <button
                                 onClick={() => onTabChange('STORE')}
-                                className="bg-red-50 border border-red-200 text-red-600 px-2 py-1 rounded-lg flex items-center gap-1 text-[10px] font-black animate-pulse"
+                                className="bg-red-50 border border-red-200 text-red-600 px-2 py-1.5 rounded-lg flex items-center gap-1 text-[10px] font-black animate-pulse"
                             >
                                 <Zap size={12} className="fill-red-600"/> SALE
                             </button>
                         )}
                         <button
                             onClick={() => onTabChange('STORE')}
-                            className="bg-blue-50 border border-blue-200 text-blue-600 px-3 py-1 rounded-xl flex items-center gap-2 font-black text-xs hover:bg-blue-100 transition-colors"
+                            className="bg-blue-50 border border-blue-200 text-blue-600 px-3 py-1.5 rounded-xl flex items-center gap-2 font-black text-xs hover:bg-blue-100 transition-colors"
                         >
-                            <Crown size={14} className="fill-blue-600"/> {user.credits} <span className="text-[10px] bg-blue-200 text-blue-800 px-1 rounded">ADD</span>
+                            <Crown size={14} className="fill-blue-600"/> {user.credits}
                         </button>
                     </div>
                 </div>
@@ -963,7 +1096,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
 
       // 4. LEGACY TABS (Mapped to new structure or kept as sub-views)
       if (activeTab === 'CUSTOM_PAGE') return <CustomBloggerPage onBack={() => onTabChange('HOME')} />;
-      if (activeTab === 'DEEP_ANALYSIS') return <AiDeepAnalysis user={user} settings={settings} onUpdateUser={handleUserUpdate} onBack={() => onTabChange('HOME')} />;
+      if ((activeTab as string) === 'DEEP_ANALYSIS') return <AiDeepAnalysis user={user} settings={settings} onUpdateUser={handleUserUpdate} onBack={() => onTabChange('HOME')} />;
       if (activeTab === 'UPDATES') return <UniversalInfoPage onBack={() => onTabChange('HOME')} />;
       if ((activeTab as string) === 'ANALYTICS') return <AnalyticsPage user={user} onBack={() => onTabChange('HOME')} settings={settings} onNavigateToChapter={onNavigateToChapter} />;
       if ((activeTab as string) === 'SUB_HISTORY') return <SubscriptionHistory user={user} onBack={() => onTabChange('HOME')} />;
@@ -976,12 +1109,12 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
       if (activeTab === 'STORE') return <Store user={user} settings={settings} onUserUpdate={handleUserUpdate} />;
       if (activeTab === 'PROFILE') return (
                 <div className="animate-in fade-in zoom-in duration-300 pb-24">
-                    <div className={`rounded-3xl p-8 text-center text-white mb-6 shadow-xl relative overflow-hidden transition-all duration-500 ${
+                    <div className={`rounded-3xl p-8 text-center text-slate-800 mb-6 shadow-sm border border-slate-200 relative overflow-hidden transition-all duration-500 ${
                         user.subscriptionLevel === 'ULTRA' && user.isPremium
-                        ? 'bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 shadow-purple-500/50 ring-2 ring-purple-400/50'
+                        ? 'bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 shadow-purple-500/10 ring-2 ring-purple-200/50'
                         : user.subscriptionLevel === 'BASIC' && user.isPremium
-                        ? 'bg-gradient-to-br from-blue-600 via-indigo-600 to-cyan-600 shadow-blue-500/50'
-                        : 'bg-gradient-to-br from-slate-700 to-slate-900'
+                        ? 'bg-gradient-to-br from-blue-50 via-cyan-50 to-sky-50 shadow-blue-500/10'
+                        : 'bg-gradient-to-br from-white to-slate-50'
                     }`}>
                         {/* ANIMATED BACKGROUND FOR ULTRA */}
                         {user.subscriptionLevel === 'ULTRA' && user.isPremium && (
@@ -1251,177 +1384,58 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
                         </div>
 
 
-                        <Button
-                            onClick={() => { setMarksheetType('MONTHLY'); setShowMonthlyReport(true); }}
-                            variant="secondary"
-                            fullWidth
-                            icon={<BarChart3 size={18} />}
-                        >
-                            View Monthly Report
-                        </Button>
-                        <Button
-                            onClick={() => onTabChange('SUB_HISTORY')}
-                            variant="secondary"
-                            fullWidth
-                            icon={<History size={18} />}
-                        >
-                            View Subscription History
-                        </Button>
+                        <div className="grid grid-cols-2 gap-3 mt-6">
+                            <button
+                                onClick={() => { setShowSidebar(false); setEditMode(true); }}
+                                className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
+                            >
+                                <Edit size={20} className="text-slate-600" />
+                                <span className="text-[10px] font-bold text-slate-700">Edit Profile</span>
+                            </button>
 
-                        <div className="flex items-center justify-between p-4 bg-slate-100 rounded-xl">
-                            <div className="flex items-center gap-2">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${isDarkMode ? 'bg-slate-800 text-yellow-400' : 'bg-white text-slate-600'}`}>
-                                    {isDarkMode ? <Sparkles size={16} /> : <Zap size={16} />}
-                                </div>
-                                <span className="font-bold text-slate-700 text-sm">Dark Mode</span>
-                            </div>
+                            <button
+                                onClick={() => { setMarksheetType('MONTHLY'); setShowMonthlyReport(true); }}
+                                className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
+                            >
+                                <BarChart3 size={20} className="text-blue-500" />
+                                <span className="text-[10px] font-bold text-slate-700">Marksheet</span>
+                            </button>
+
+                            <button
+                                onClick={() => onTabChange('SUB_HISTORY' as any)}
+                                className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
+                            >
+                                <History size={20} className="text-purple-500" />
+                                <span className="text-[10px] font-bold text-slate-700">Sub History</span>
+                            </button>
+
                             <button
                                 onClick={() => onToggleDarkMode && onToggleDarkMode(!isDarkMode)}
-                                className={`w-12 h-7 rounded-full transition-all relative ${isDarkMode ? 'bg-slate-800' : 'bg-slate-300'}`}
+                                className={`p-3 rounded-xl border shadow-sm flex flex-col items-center justify-center gap-2 transition-colors ${isDarkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 hover:bg-slate-50'}`}
                             >
-                                <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-all shadow-sm ${isDarkMode ? 'left-6' : 'left-1'}`} />
+                                {isDarkMode ? <Sparkles size={20} className="text-yellow-400" /> : <Zap size={20} className="text-slate-600" />}
+                                <span className={`text-[10px] font-bold ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    handleUserUpdate(user); // Force sync before logout
+                                    localStorage.removeItem('nst_current_user');
+                                    window.location.reload();
+                                }}
+                                className="col-span-2 bg-red-50 p-3 rounded-xl border border-red-100 flex items-center justify-center gap-2 hover:bg-red-100 transition-colors text-red-600 font-bold text-sm"
+                            >
+                                <LogOut size={16} /> Logout
                             </button>
                         </div>
-
-                        <Button onClick={() => { setShowSidebar(false); setEditMode(true); }} variant="outline" fullWidth>✏️ Edit Profile</Button>
-                        <Button
-                            onClick={() => {
-                                handleUserUpdate(user); // Force sync before logout
-                                localStorage.removeItem('nst_current_user');
-                                window.location.reload();
-                            }}
-                            variant="danger"
-                            fullWidth
-                        >
-                            🚪 Logout
-                        </Button>
                     </div>
                 </div>
       );
 
-      // EDIT PROFILE MODAL
-      if (editMode) {
-          return (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
-                  <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
-                      <div className="flex justify-between items-center mb-6">
-                          <h3 className="text-xl font-black text-slate-800 flex items-center gap-2"><Edit className="text-blue-600"/> Edit Profile</h3>
-                          <button onClick={() => setEditMode(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20} /></button>
-                      </div>
-
-                      <div className="space-y-4">
-                          <div>
-                              <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Class Level</label>
-                              <select
-                                  value={profileData.classLevel}
-                                  onChange={(e) => setProfileData({...profileData, classLevel: e.target.value as any})}
-                                  className="w-full p-3 rounded-xl border border-slate-200 font-bold bg-slate-50"
-                              >
-                                  {(settings?.allowedClasses || ['6','7','8','9','10','11','12','COMPETITION']).map(c => <option key={c} value={c}>{c === 'COMPETITION' ? 'Competition' : `Class ${c}`}</option>)}
-                              </select>
-                              <div className="flex items-center justify-between mt-1">
-                                  <p className="text-[10px] text-slate-500">
-                                      Daily Limit: {
-                                          user.subscriptionLevel === 'ULTRA' ? '3' :
-                                          user.subscriptionLevel === 'BASIC' ? '2' : '1'
-                                      } changes
-                                  </p>
-                                  <p className="text-[10px] text-blue-600 font-bold">
-                                      Remaining: {
-                                          (() => {
-                                              const limit = user.subscriptionLevel === 'ULTRA' ? 3 : user.subscriptionLevel === 'BASIC' ? 2 : 1;
-                                              const used = parseInt(localStorage.getItem(`nst_class_changes_${user.id}_${new Date().toDateString()}`) || '0');
-                                              return Math.max(0, limit - used);
-                                          })()
-                                      }
-                                  </p>
-                              </div>
-                          </div>
-
-                          {(['11','12'].includes(profileData.classLevel) || profileData.classLevel === 'COMPETITION') && (
-                              <div>
-                                  <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Stream</label>
-                                  <select
-                                      value={profileData.stream}
-                                      onChange={(e) => setProfileData({...profileData, stream: e.target.value as any})}
-                                      className="w-full p-3 rounded-xl border border-slate-200 font-bold bg-slate-50"
-                                  >
-                                      <option value="Science">Science</option>
-                                      <option value="Commerce">Commerce</option>
-                                      <option value="Arts">Arts</option>
-                                  </select>
-                              </div>
-                          )}
-
-                          <div>
-                              <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Board</label>
-                              <select
-                                  value={profileData.board}
-                                  onChange={(e) => setProfileData({...profileData, board: e.target.value as any})}
-                                  className="w-full p-3 rounded-xl border border-slate-200 font-bold bg-slate-50"
-                              >
-                                  {(settings?.allowedBoards || ['CBSE', 'BSEB']).map(b => (
-                                      <option key={b} value={b}>{b} {b === 'CBSE' ? '(English)' : b === 'BSEB' ? '(Hindi)' : ''}</option>
-                                  ))}
-                              </select>
-                          </div>
-
-                          <div>
-                              <label className="text-xs font-bold text-slate-500 uppercase block mb-1">New Password (Optional)</label>
-                              <input
-                                  type="text"
-                                  placeholder="Leave blank to keep current"
-                                  value={profileData.newPassword}
-                                  onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})}
-                                  className="w-full p-3 rounded-xl border border-slate-200"
-                              />
-                          </div>
-                      </div>
-
-                      <div className="flex gap-3 mt-8">
-                          <button onClick={() => setEditMode(false)} className="flex-1 py-3 text-slate-500 font-bold bg-slate-100 rounded-xl hover:bg-slate-200">Cancel</button>
-                          <button
-                              onClick={() => {
-                                  // Check Class Change Limit
-                                  if (profileData.classLevel !== user.classLevel) {
-                                      const limit = user.subscriptionLevel === 'ULTRA' ? 3 : user.subscriptionLevel === 'BASIC' ? 2 : 1;
-                                      const todayKey = `nst_class_changes_${user.id}_${new Date().toDateString()}`;
-                                      const used = parseInt(localStorage.getItem(todayKey) || '0');
-
-                                      if (used >= limit) {
-                                          showAlert(`Daily class change limit reached (${limit})! Upgrade to increase.`, "ERROR");
-                                          return;
-                                      }
-
-                                      // Increment Usage
-                                      localStorage.setItem(todayKey, (used + 1).toString());
-                                  }
-
-                                  // Update User
-                                  const updates: Partial<User> = {
-                                      classLevel: profileData.classLevel as any,
-                                      board: profileData.board as any,
-                                      stream: profileData.stream as any
-                                  };
-                                  if (profileData.newPassword) updates.password = profileData.newPassword;
-
-                                  handleUserUpdate({...user, ...updates});
-                                  setEditMode(false);
-                                  showAlert("Profile Updated Successfully!", "SUCCESS");
-                              }}
-                              className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700"
-                          >
-                              Save Changes
-                          </button>
-                      </div>
-                  </div>
-              </div>
-          );
-      }
 
       // Handle Drill-Down Views (Video, PDF, MCQ, AUDIO)
-      if (activeTab === 'VIDEO' || activeTab === 'PDF' || activeTab === 'MCQ' || activeTab === 'AUDIO') {
-          return renderContentSection(activeTab);
+      if (activeTab === 'VIDEO' || activeTab === 'PDF' || activeTab === 'MCQ' || (activeTab as any) === 'AUDIO') {
+          return renderContentSection(activeTab as any);
       }
 
       return null;
@@ -1540,6 +1554,136 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
                 </div>
             </div>
         )}
+
+      {/* EDIT PROFILE MODAL (Moved to root level of StudentDashboard to fix z-index and conditional rendering issues) */}
+      {editMode && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+                  <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-black text-slate-800 flex items-center gap-2"><Edit className="text-blue-600"/> Edit Profile</h3>
+                      <button onClick={() => setEditMode(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20} /></button>
+                  </div>
+
+                  <div className="space-y-4">
+                      <div>
+                          <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Class Level</label>
+                          <select
+                              value={profileData.classLevel}
+                              onChange={(e) => setProfileData({...profileData, classLevel: e.target.value as any})}
+                              className="w-full p-3 rounded-xl border border-slate-200 font-bold bg-slate-50"
+                          >
+                              {(settings?.allowedClasses || ['6','7','8','9','10','11','12','COMPETITION']).map(c => <option key={c} value={c}>{c === 'COMPETITION' ? 'Competition' : `Class ${c}`}</option>)}
+                          </select>
+                          <div className="flex items-center justify-between mt-1">
+                              <p className="text-[10px] text-slate-500">
+                                  Daily Limit: {
+                                      user.subscriptionLevel === 'ULTRA' ? '3' :
+                                      user.subscriptionLevel === 'BASIC' ? '2' : '1'
+                                  } changes
+                              </p>
+                              <p className="text-[10px] text-blue-600 font-bold">
+                                  Remaining: {
+                                      (() => {
+                                          const limit = user.subscriptionLevel === 'ULTRA' ? 3 : user.subscriptionLevel === 'BASIC' ? 2 : 1;
+                                          const used = parseInt(localStorage.getItem(`nst_class_changes_${user.id}_${new Date().toDateString()}`) || '0');
+                                          return Math.max(0, limit - used);
+                                      })()
+                                  }
+                              </p>
+                          </div>
+                      </div>
+
+                      {(['11','12'].includes(profileData.classLevel) || profileData.classLevel === 'COMPETITION') && (
+                          <div>
+                              <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Stream</label>
+                              <select
+                                  value={profileData.stream}
+                                  onChange={(e) => setProfileData({...profileData, stream: e.target.value as any})}
+                                  className="w-full p-3 rounded-xl border border-slate-200 font-bold bg-slate-50"
+                              >
+                                  <option value="Science">Science</option>
+                                  <option value="Commerce">Commerce</option>
+                                  <option value="Arts">Arts</option>
+                              </select>
+                          </div>
+                      )}
+
+                      <div>
+                          <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Board</label>
+                          <select
+                              value={profileData.board}
+                              onChange={(e) => setProfileData({...profileData, board: e.target.value as any})}
+                              className="w-full p-3 rounded-xl border border-slate-200 font-bold bg-slate-50"
+                          >
+                              {(settings?.allowedBoards || ['CBSE', 'BSEB']).map(b => (
+                                  <option key={b} value={b}>{b} {b === 'CBSE' ? '(English)' : b === 'BSEB' ? '(Hindi)' : ''}</option>
+                              ))}
+                          </select>
+                      </div>
+
+                      <div>
+                          <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Mobile Number</label>
+                          <input
+                              type="tel"
+                              value={profileData.mobile || user.mobile}
+                              onChange={(e) => setProfileData({...profileData, mobile: e.target.value.replace(/\D/g, '').slice(0,10)} as any)}
+                              className="w-full p-3 rounded-xl border border-slate-200 font-bold"
+                              placeholder="10-digit number"
+                          />
+                      </div>
+
+                      <div>
+                          <label className="text-xs font-bold text-slate-500 uppercase block mb-1">New Password (Optional)</label>
+                          <input
+                              type="text"
+                              placeholder="Leave blank to keep current"
+                              value={profileData.newPassword}
+                              onChange={(e) => setProfileData({...profileData, newPassword: e.target.value})}
+                              className="w-full p-3 rounded-xl border border-slate-200"
+                          />
+                      </div>
+                  </div>
+
+                  <div className="flex gap-3 mt-8">
+                      <button onClick={() => setEditMode(false)} className="flex-1 py-3 text-slate-500 font-bold bg-slate-100 rounded-xl hover:bg-slate-200">Cancel</button>
+                      <button
+                          onClick={() => {
+                              // Check Class Change Limit
+                              if (profileData.classLevel !== user.classLevel) {
+                                  const limit = user.subscriptionLevel === 'ULTRA' ? 3 : user.subscriptionLevel === 'BASIC' ? 2 : 1;
+                                  const todayKey = `nst_class_changes_${user.id}_${new Date().toDateString()}`;
+                                  const used = parseInt(localStorage.getItem(todayKey) || '0');
+
+                                  if (used >= limit) {
+                                      showAlert(`Daily class change limit reached (${limit})! Upgrade to increase.`, "ERROR");
+                                      return;
+                                  }
+
+                                  // Increment Usage
+                                  localStorage.setItem(todayKey, (used + 1).toString());
+                              }
+
+                              // Update User
+                              const updates: Partial<User> = {
+                                  classLevel: profileData.classLevel as any,
+                                  board: profileData.board as any,
+                                  stream: profileData.stream as any
+                              };
+                              if (profileData.newPassword) updates.password = profileData.newPassword;
+                              if (profileData.mobile) updates.mobile = profileData.mobile;
+
+                              handleUserUpdate({...user, ...updates});
+                              setEditMode(false);
+                              showAlert("Profile Updated Successfully!", "SUCCESS");
+                          }}
+                          className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700"
+                      >
+                          Save Changes
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
 
         {/* REQUEST CONTENT MODAL */}
         {showRequestModal && (
@@ -1867,7 +2011,7 @@ export const StudentDashboard: React.FC<Props> = ({ user, dailyStudySeconds, onS
                           if (type === 'PDF' || type === 'VIDEO' || type === 'MCQ') {
                               setLoadingChapters(true);
                               const lang = user.board === 'BSEB' ? 'Hindi' : 'English';
-                              fetchChapters(user.board || 'CBSE', user.classLevel || '10', user.stream || 'Science', null, lang).then(allChapters => {
+                                  fetchChapters(user.board as any || 'CBSE', user.classLevel as any || '10', user.stream as any || 'Science', null as any, lang).then(allChapters => {
                                   const ch = allChapters.find(c => c.id === chapterId);
                                   if (ch) {
                                       // Switch Tab

@@ -1406,7 +1406,17 @@ const RevisionHubComponent: React.FC<Props> = ({ user, onTabChange, settings, on
             )}
 
             {/* FOOTER */}
-
+            {settings?.showFooter !== false && (
+                <div className="mt-12 text-center pb-8">
+                    <p
+                        className="text-[10px] font-black uppercase tracking-widest"
+                        style={{ color: settings?.footerColor || '#cbd5e1' }}
+                    >
+                        Developed by Nadim Anwar
+                    </p>
+                    <p className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Powered by NSTA</p>
+                </div>
+            )}
         </div>
     );
 };
