@@ -589,6 +589,10 @@ export interface SystemSettings {
   };
   
   // NEW: App Modes (Global Control)
+  authConfig?: {
+    isGoogleAuthEnabled?: boolean;
+    isEmailAuthEnabled?: boolean;
+  };
   appMode?: {
       allowedModesForFree: ('SCHOOL' | 'COMPETITION')[]; // Modes visible to Free users
       allowedModesForPremium: ('SCHOOL' | 'COMPETITION')[]; // Modes visible to Premium users
