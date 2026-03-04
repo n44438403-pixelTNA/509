@@ -2660,12 +2660,23 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                       <h2 className="font-black text-slate-800 text-lg leading-none">Admin Console</h2>
                   </div>
 
+
                   <div className="flex items-center gap-2">
                       {/* STRICT BOARD SWITCHER */}
                       <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
                           <button onClick={() => handleBoardChange('CBSE')} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${adminBoardContext === 'CBSE' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>CBSE</button>
                           <button onClick={() => handleBoardChange('BSEB')} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${adminBoardContext === 'BSEB' ? 'bg-white shadow text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}>BSEB</button>
                       </div>
+
+
+
+                  <div className="flex items-center gap-2">
+                      {/* STRICT BOARD SWITCHER */}
+                      <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+                          <button onClick={() => handleBoardChange('CBSE')} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${adminBoardContext === 'CBSE' ? 'bg-white shadow text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>CBSE</button>
+                          <button onClick={() => handleBoardChange('BSEB')} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${adminBoardContext === 'BSEB' ? 'bg-white shadow text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}>BSEB</button>
+                      </div>
+
 
                       {/* ONLINE USERS */}
                       <div className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200" title="Active Users (5m)">
@@ -9987,6 +9998,7 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
           <NstaFeatureManager settings={localSettings} onUpdateSettings={setLocalSettings} onBack={() => setActiveTab('DASHBOARD')} />
       )}
 
+
       {/* --- POPUP MANAGER TAB --- */}
       {activeTab === 'POPUP_MANAGER' && (
           <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 animate-in slide-in-from-right">
@@ -10211,7 +10223,89 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                               className="w-20 p-1 border rounded text-sm text-center"
                           />
                       </div>
+
+            {/* --- VISIBILITY CONTROL (Legacy Restored) --- */}
+      {activeTab === 'CONFIG_VISIBILITY' && (
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 animate-in slide-in-from-right">
+              <div className="flex items-center gap-4 mb-6 border-b pb-4">
+                  <button onClick={() => setActiveTab('DASHBOARD')} className="bg-slate-100 p-2 rounded-full hover:bg-slate-200"><ArrowLeft size={20} /></button>
+                  <h3 className="text-xl font-black text-slate-800">Student Dashboard Visibility</h3>
+              </div>
+
+              <div className="mb-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                  <h4 className="font-bold text-slate-800 mb-2">Configure Tier Visibility</h4>
+                  <p className="text-xs text-slate-500 mb-4">Select which tiers can see and access specific sections of the app.</p>
+
+                  <div className="space-y-4">
+                      {ALL_FEATURES.filter(f => !f.adminVisible).map(feature => {
+                          const config = localSettings.featureConfig?.[feature.id] || { visible: true, allowedTiers: ['FREE', 'BASIC', 'ULTRA'] };
+                          const isAllowed = (tier: string) => config.allowedTiers.includes(tier);
+
+                          return (
+                              <div key={feature.id} className="flex flex-col md:flex-row md:items-center justify-between bg-white p-3 rounded-lg border border-slate-200 shadow-sm gap-4">
+                                  <div className="flex items-center gap-2">
+                                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+                                          <Eye size={14} />
+                                      </div>
+                                      <div>
+                                          <p className="font-bold text-sm text-slate-800">{feature.label}</p>
+                                          <p className="text-[10px] text-slate-400 font-mono">{feature.id}</p>
+                                      </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                                      <button
+                                          onClick={() => {
+                                              const newTiers = isAllowed('FREE') ? config.allowedTiers.filter(t => t !== 'FREE') : [...config.allowedTiers, 'FREE'];
+                                              setLocalSettings({
+                                                  ...localSettings,
+                                                  featureConfig: {
+                                                      ...localSettings.featureConfig,
+                                                      [feature.id]: { ...config, allowedTiers: newTiers }
+                                                  }
+                                              });
+                                          }}
+                                          className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${isAllowed('FREE') ? 'bg-green-100 text-green-700' : 'bg-white text-slate-400'}`}
+                                      >
+                                          FREE
+                                      </button>
+                                      <button
+                                          onClick={() => {
+                                              const newTiers = isAllowed('BASIC') ? config.allowedTiers.filter(t => t !== 'BASIC') : [...config.allowedTiers, 'BASIC'];
+                                              setLocalSettings({
+                                                  ...localSettings,
+                                                  featureConfig: {
+                                                      ...localSettings.featureConfig,
+                                                      [feature.id]: { ...config, allowedTiers: newTiers }
+                                                  }
+                                              });
+                                          }}
+                                          className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${isAllowed('BASIC') ? 'bg-blue-100 text-blue-700' : 'bg-white text-slate-400'}`}
+                                      >
+                                          BASIC
+                                      </button>
+                                      <button
+                                          onClick={() => {
+                                              const newTiers = isAllowed('ULTRA') ? config.allowedTiers.filter(t => t !== 'ULTRA') : [...config.allowedTiers, 'ULTRA'];
+                                              setLocalSettings({
+                                                  ...localSettings,
+                                                  featureConfig: {
+                                                      ...localSettings.featureConfig,
+                                                      [feature.id]: { ...config, allowedTiers: newTiers }
+                                                  }
+                                              });
+                                          }}
+                                          className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${isAllowed('ULTRA') ? 'bg-purple-100 text-purple-700' : 'bg-white text-slate-400'}`}
+                                      >
+                                          ULTRA
+                                      </button>
+                                  </div>
+                              </div>
+                          );
+                      })}
+
                   </div>
+
 
                   {/* Custom Info Popup */}
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -10424,6 +10518,7 @@ Capital of India?       Mumbai  Delhi   Kolkata Chennai 2       Delhi is the cap
                       })}
                   </div>
               </div>
+
 
               <div className="mt-8 flex justify-end">
                   <button

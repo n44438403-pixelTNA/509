@@ -524,6 +524,7 @@ export interface SystemSettings {
     intervalMinutes?: number;
     showNearExpiryHours?: number;
   };
+
   globalPopupManager?: {
     dailyTracker: { enabled: boolean; intervalHours: number };
     featurePopup: { enabled: boolean; intervalHours: number };
@@ -533,6 +534,7 @@ export interface SystemSettings {
     updatePopup: { enabled: boolean; intervalHours: number; forceShow: boolean; message: string; title: string };
     infoPopup: { enabled: boolean; intervalHours: number; title: string; message: string };
   };
+
   creditFreeEvent?: {
     enabled: boolean;
   };
