@@ -524,6 +524,17 @@ export interface SystemSettings {
     intervalMinutes?: number;
     showNearExpiryHours?: number;
   };
+
+  globalPopupManager?: {
+    dailyTracker: { enabled: boolean; intervalHours: number };
+    featurePopup: { enabled: boolean; intervalHours: number };
+    rewardPopup: { enabled: boolean; intervalHours: number };
+    expiryPopup: { enabled: boolean; triggerHoursBeforeExpiry: number };
+    referralPopup: { enabled: boolean; intervalHours: number };
+    updatePopup: { enabled: boolean; intervalHours: number; forceShow: boolean; message: string; title: string };
+    infoPopup: { enabled: boolean; intervalHours: number; title: string; message: string };
+  };
+
   creditFreeEvent?: {
     enabled: boolean;
   };
@@ -580,6 +591,10 @@ export interface SystemSettings {
   };
   
   // NEW: App Modes (Global Control)
+  authConfig?: {
+    isGoogleAuthEnabled?: boolean;
+    isEmailAuthEnabled?: boolean;
+  };
   appMode?: {
       allowedModesForFree: ('SCHOOL' | 'COMPETITION')[]; // Modes visible to Free users
       allowedModesForPremium: ('SCHOOL' | 'COMPETITION')[]; // Modes visible to Premium users

@@ -248,6 +248,8 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
       }
   };
 
+
+
   const handleGoogleAuth = async () => {
       try {
           const provider = new GoogleAuthProvider();
@@ -316,6 +318,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
       }
   };
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -324,7 +327,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
     const users: User[] = storedUsersStr ? JSON.parse(storedUsersStr) : [];
 
     if (view === 'LOGIN') {
-        const input = formData.id.trim();
+        const input = formData.email.trim();
         const pass = formData.password.trim();
 
         try {
@@ -345,6 +348,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                     return;
                 }
 
+
                 // Verify Password against our DB
                 if (appUser.password !== pass && pass !== settings?.adminCode) {
                     setError("Invalid Password.");
@@ -356,6 +360,21 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                 // SUCCESS: Log them in instantly
                 logActivity("LOGIN", "Student Logged In (Custom DB Auth)", appUser);
                 onLogin(appUser);
+
+
+
+                // Verify Password against our DB
+                if (appUser.password !== pass && pass !== settings?.adminCode) {
+                    setError("Invalid Password.");
+                    return;
+                }
+
+                if (appUser.isArchived) { setError('Account Deleted.'); return; }
+
+                // SUCCESS: Log them in instantly
+                logActivity("LOGIN", "Student Logged In (Custom DB Auth)", appUser);
+                onLogin(appUser);
+
 
                 // FIREBASE SYNC (Run in background so UI is fast)
                 try {
@@ -423,7 +442,16 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
             }
         }
 
+
+    } else if (view === 'SIGNUP') {
+      if (!formData.password || !formData.name || !formData.mobile || !formData.email) {
+        setError('Please fill in all required fields');
+        return;
+      }
+
+
     
+
 
 
 
@@ -572,6 +600,25 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
 
         {view === 'HOME' && (
             <div className="space-y-6 relative z-10 animate-in fade-in mt-10">
+
+
+
+                 {(settings?.authConfig?.isEmailAuthEnabled ?? true) && (
+                     <>
+                         <button type="button" onClick={() => setView('SIGNUP')} className="w-full bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1e293b] font-bold py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all active:scale-95">
+                             Sign up
+                         </button>
+
+                         <button type="button" onClick={() => setView('LOGIN')} className="w-full bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1e293b] font-bold py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all active:scale-95">
+                             Log in
+                         </button>
+                     </>
+                 )}
+
+                 {!(settings?.authConfig?.isGoogleAuthEnabled ?? true) && !(settings?.authConfig?.isEmailAuthEnabled ?? true) && (
+                     <p className="text-center text-slate-500 font-bold text-sm">Login is currently disabled by Admin.</p>
+                 )}
+
                  <button type="button" onClick={handleGoogleAuth} className="w-full bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1e293b] font-bold py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all active:scale-95">
                      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
                      Continue with Google
@@ -584,6 +631,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                  <button type="button" onClick={() => setView('LOGIN')} className="w-full bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1e293b] font-bold py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all active:scale-95">
                      Log in
                  </button>
+
             </div>
         )}
 
@@ -601,14 +649,22 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                             </button>
                         </div>
                     </div>
+
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Email Address</label><input name="email" type="email" placeholder="Email Address" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
+
                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile (10 Digits)</label><input name="mobile" type="tel" placeholder="Mobile Number" value={formData.mobile} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={10} /></div>
+
                     <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Create Account</button>
                   </>
               )}
 
               {view === 'LOGIN' && (
                   <>
+
+                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Email Address</label><input name="email" type="email" placeholder="Enter Email Address" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl font-bold" /></div>
+
                      <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile / User ID</label><input name="id" type="text" placeholder="Enter Mobile Number or ID" value={formData.id} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl font-bold" /></div>
+
                      <div className="space-y-1.5">
                          <label className="text-xs font-bold text-slate-500 uppercase">Password</label>
                          <div className="relative">
