@@ -248,73 +248,6 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
       }
   };
 
-  const handleGoogleAuth = async () => {
-      try {
-          const provider = new GoogleAuthProvider();
-          await setPersistence(auth, browserLocalPersistence);
-          const result = await signInWithPopup(auth, provider);
-          const firebaseUser = result.user;
-
-          const storedUsersStr = localStorage.getItem('nst_users');
-          const users: User[] = storedUsersStr ? JSON.parse(storedUsersStr) : [];
-
-          // Try fetching by ID first
-          let appUser: any = await getUserData(firebaseUser.uid);
-
-          // Fallback: Try by Email
-          if (!appUser && firebaseUser.email) {
-              appUser = await getUserByEmail(firebaseUser.email);
-          }
-
-          // Fallback: Local Storage
-          if (!appUser && firebaseUser.email) {
-               appUser = users.find(u => u.id === firebaseUser.uid || u.email === firebaseUser.email);
-          }
-
-          if (!appUser) {
-              console.log("No existing user found for this Google account. Creating new profile...");
-              const newId = generateUserId();
-              appUser = {
-                  id: firebaseUser.uid,
-                  displayId: newId,
-                  name: firebaseUser.displayName || 'Student',
-                  email: firebaseUser.email || '',
-                  password: '', // Passwordless for Google Auth
-                  mobile: '',
-                  role: 'STUDENT',
-                  createdAt: new Date().toISOString(),
-                  credits: settings?.signupBonus || 2,
-                  streak: 0,
-                  lastLoginDate: new Date().toISOString(),
-                  board: '', // Left empty to trigger onboarding
-                  classLevel: '', // Left empty to trigger onboarding
-                  provider: 'google',
-                  profileCompleted: false,
-                  progress: {},
-                  redeemedCodes: [],
-                  subscriptionTier: 'FREE',
-                  isPremium: false
-              } as User;
-
-              const updatedUsers = [...users, appUser];
-              localStorage.setItem('nst_users', JSON.stringify(updatedUsers));
-
-              await saveUserToLive(appUser);
-              logActivity("SIGNUP_GOOGLE", "New Student Registered via Google", appUser);
-          } else {
-              console.log("Existing user found via Google:", appUser.id);
-          }
-
-          if (appUser.isArchived) { setError('Account Deleted.'); return; }
-
-          logActivity("LOGIN_GOOGLE", "Student Logged In (Google)", appUser);
-          onLogin(appUser);
-
-      } catch (err: any) {
-          console.error("Google Auth Error:", err);
-          setError(err.message || "Google Login Failed. Try again.");
-      }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,7 +257,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
     const users: User[] = storedUsersStr ? JSON.parse(storedUsersStr) : [];
 
     if (view === 'LOGIN') {
-        const input = formData.id.trim();
+        const input = formData.email.trim();
         const pass = formData.password.trim();
 
         try {
@@ -577,12 +510,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
 
         {view === 'HOME' && (
             <div className="space-y-6 relative z-10 animate-in fade-in mt-10">
-                 {(settings?.authConfig?.isGoogleAuthEnabled ?? true) && (
-                     <button type="button" onClick={handleGoogleAuth} className="w-full bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1e293b] font-bold py-4 rounded-[2rem] flex items-center justify-center gap-3 transition-all active:scale-95">
-                         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
-                         Continue with Google
-                     </button>
-                 )}
+
 
                  {(settings?.authConfig?.isEmailAuthEnabled ?? true) && (
                      <>
@@ -616,14 +544,14 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
                             </button>
                         </div>
                     </div>
-                    <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile (10 Digits)</label><input name="mobile" type="tel" placeholder="Mobile Number" value={formData.mobile} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" maxLength={10} /></div>
+                    <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Email Address</label><input name="email" type="email" placeholder="Email Address" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl" /></div>
                     <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl mt-4">Create Account</button>
                   </>
               )}
 
               {view === 'LOGIN' && (
                   <>
-                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Mobile / User ID</label><input name="id" type="text" placeholder="Enter Mobile Number or ID" value={formData.id} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl font-bold" /></div>
+                     <div className="space-y-1.5"><label className="text-xs font-bold text-slate-500 uppercase">Email Address</label><input name="email" type="email" placeholder="Enter Email Address" value={formData.email} onChange={handleChange} className="w-full px-4 py-3 border border-slate-200 rounded-xl font-bold" /></div>
                      <div className="space-y-1.5">
                          <label className="text-xs font-bold text-slate-500 uppercase">Password</label>
                          <div className="relative">

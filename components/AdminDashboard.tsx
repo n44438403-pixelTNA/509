@@ -4138,21 +4138,7 @@ const AdminDashboardInner: React.FC<Props> = ({ onNavigate, settings, onUpdateSe
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                       <h4 className="font-bold text-slate-700 mb-3">Authentication Options</h4>
                       <div className="flex flex-col gap-4">
-                          <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                              <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500">G</div>
-                                  <div>
-                                      <p className="font-bold text-slate-700 text-sm">Google Auth</p>
-                                      <p className="text-[10px] text-slate-400">Allow users to sign in with Google.</p>
-                                  </div>
-                              </div>
-                              <input
-                                  type="checkbox"
-                                  className="w-5 h-5 accent-blue-600 cursor-pointer"
-                                  checked={localSettings.authConfig?.isGoogleAuthEnabled ?? true}
-                                  onChange={(e) => setLocalSettings({...localSettings, authConfig: {...(localSettings.authConfig || {}), isGoogleAuthEnabled: e.target.checked}})}
-                              />
-                          </div>
+
 
                           <div className="flex items-center justify-between bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
                               <div className="flex items-center gap-3">
