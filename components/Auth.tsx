@@ -423,12 +423,7 @@ export const Auth: React.FC<Props> = ({ onLogin, logActivity }) => {
             }
         }
 
-    } else if (view === 'SIGNUP') {
-      if (!formData.password || !formData.name || !formData.mobile || !formData.email) {
-        setError('Please fill in all required fields');
-        return;
-      }
-
+    
 
 
 
